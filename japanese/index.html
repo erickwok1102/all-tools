@@ -1,0 +1,1511 @@
+<title>みんなの復習帳</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one narrow study column; a genkō-yōshi (原稿用紙) card is the hero, tabs sit in a sticky header. */
+:root {
+  --paper: #eef1f4;
+  --sheet: #fbfcfd;
+  --ink: #1a2232;
+  --ink-soft: #5b6578;
+  --rule: #d5dbe4;
+  --grid: #dfe6ef;
+  --ai: #2c4a8c;        /* 藍 indigo: primary accent */
+  --ai-wash: #e3e9f6;
+  --shu: #c8432c;       /* 朱 vermilion: forgot */
+  --yamabuki: #b9800f;  /* 山吹 amber: hard */
+  --matcha: #3b7f4f;    /* 抹茶 green: easy / learned */
+  --font-jp: "Klee One", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-ui: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+  --step-4: 2.75rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11151d; --sheet: #181e29; --ink: #e5e9f1; --ink-soft: #9aa4b6;
+    --rule: #2b3444; --grid: #222b39; --ai: #8ea9ec; --ai-wash: #1f2a42;
+    --shu: #ec7a63; --yamabuki: #e0ae4a; --matcha: #73c08a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #11151d; --sheet: #181e29; --ink: #e5e9f1; --ink-soft: #9aa4b6;
+  --rule: #2b3444; --grid: #222b39; --ai: #8ea9ec; --ai-wash: #1f2a42;
+  --shu: #ec7a63; --yamabuki: #e0ae4a; --matcha: #73c08a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--font-ui); font-size: var(--step-0); line-height: 1.6;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+.wrap {
+  max-width: 600px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+header {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--paper); padding-block: 14px 0;
+  display: grid; gap: 10px; border-bottom: 1px solid var(--rule);
+}
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand h1 { margin: 0; font-family: var(--font-jp); font-weight: 600; font-size: var(--step-2); letter-spacing: 0.04em; text-wrap: balance; }
+.brand .meta { color: var(--ink-soft); font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+nav button {
+  border: 0; background: none; color: var(--ink-soft); font: inherit; font-weight: 500;
+  padding: 8px 12px 10px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+}
+nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ai); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }
+main { padding-top: 18px; display: grid; gap: 18px; }
+section[hidden] { display: none; }
+.view { display: grid; gap: 16px; }
+
+/* Study card */
+.progress { display: flex; align-items: center; gap: 10px; font-size: var(--step--1); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.bar { flex: 1; height: 4px; background: var(--rule); border-radius: 2px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--ai); width: 0; transition: width .25s; }
+.card {
+  background-color: var(--sheet);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px; background-position: -1px -1px;
+  border: 1px solid var(--rule); border-radius: 6px;
+  min-height: 300px; padding: 22px 20px; display: grid; align-content: space-between; gap: 18px;
+  cursor: pointer; user-select: none;
+}
+.card .tag { display: flex; gap: 8px; align-items: center; font-size: var(--step--1); color: var(--ink-soft); }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--rule); background: var(--sheet); font-size: 0.75rem; letter-spacing: 0.04em; }
+.pill.new { color: var(--ai); border-color: var(--ai); }
+.pill.lapse { color: var(--shu); border-color: var(--shu); }
+.pill.note { color: var(--matcha); border-color: var(--matcha); }
+.face { text-align: center; display: grid; gap: 6px; justify-items: center; }
+.face .ruby { font-family: var(--font-jp); font-size: var(--step-1); color: var(--ink-soft); min-height: 1.6em; }
+.face .big { font-family: var(--font-jp); font-size: var(--step-4); line-height: 1.25; font-weight: 600; word-break: keep-all; overflow-wrap: anywhere; background: var(--sheet); padding: 0 8px; }
+.face .big.zh { font-family: var(--font-ui); font-size: 2rem; font-weight: 700; }
+.face .big.pattern { font-size: 2rem; }
+.answer { border-top: 1px dashed var(--rule); padding-top: 14px; display: grid; gap: 8px; text-align: left; background: var(--sheet); }
+.answer .mean { font-size: var(--step-1); font-weight: 500; }
+.answer .jp { font-family: var(--font-jp); font-size: var(--step-1); }
+.answer .zh { color: var(--ink-soft); }
+.answer .note { font-size: var(--step--1); color: var(--ink-soft); white-space: pre-line; }
+.hint { text-align: center; color: var(--ink-soft); font-size: var(--step--1); background: var(--sheet); justify-self: center; padding: 0 6px; }
+.grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.grades.two { grid-template-columns: repeat(2, 1fr); }
+.grades button {
+  font: inherit; font-weight: 700; padding: 10px 4px 8px; border-radius: 6px; cursor: pointer;
+  border: 1px solid currentColor; background: var(--sheet); display: grid; gap: 0; line-height: 1.3;
+}
+.grades button small { font-weight: 400; font-size: 0.75rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.g0 { color: var(--shu); } .g1 { color: var(--yamabuki); } .g2 { color: var(--ai); } .g3 { color: var(--matcha); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn {
+  font: inherit; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink);
+  padding: 7px 14px; border-radius: 6px; cursor: pointer;
+}
+.btn.primary { background: var(--ai); border-color: var(--ai); color: var(--sheet); font-weight: 700; }
+.btn.ghost { background: none; }
+.btn.small { padding: 4px 10px; font-size: var(--step--1); }
+.btn.danger { color: var(--shu); border-color: var(--shu); }
+.done { text-align: center; padding: 36px 16px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; display: grid; gap: 12px; justify-items: center; }
+.done .stamp {
+  font-family: var(--font-jp); font-weight: 600; font-size: 1.6rem; color: var(--shu);
+  border: 3px solid var(--shu); border-radius: 50%; width: 92px; height: 92px; display: grid; place-items: center; transform: rotate(-8deg);
+}
+.ai-box { border: 1px solid var(--rule); border-radius: 6px; padding: 12px; display: grid; gap: 8px; background: var(--sheet); cursor: auto; user-select: text; }
+.ai-box textarea, .ai-box input { width: 100%; }
+.ai-out { white-space: pre-wrap; font-size: var(--step-0); line-height: 1.7; }
+.ai-out:empty { display: none; }
+
+/* Lists */
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button {
+  font: inherit; font-variant-numeric: tabular-nums; min-width: 40px; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--rule); background: var(--sheet); color: var(--ink-soft); cursor: pointer;
+}
+.chips button[aria-pressed="true"] { background: var(--ai); color: var(--sheet); border-color: var(--ai); }
+.chips button.future { opacity: 0.55; }
+input[type="search"], input[type="text"], input[type="number"], select, textarea {
+  font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px;
+}
+textarea { resize: vertical; min-height: 64px; }
+.list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--rule); }
+.list .w { font-family: var(--font-jp); font-size: var(--step-1); line-height: 1.3; min-width: 0; }
+.list .w small { display: block; font-size: var(--step--1); color: var(--ink-soft); }
+.list .m { min-width: 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); }
+.dot.learning { background: var(--yamabuki); }
+.dot.known { background: var(--matcha); }
+.dot.due { background: var(--shu); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: var(--step--1); color: var(--ink-soft); align-items: center; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.icon-btn { border: 0; background: none; color: var(--ai); cursor: pointer; font: inherit; font-size: var(--step--1); padding: 4px 6px; }
+
+.gram { border: 1px solid var(--rule); background: var(--sheet); border-radius: 6px; padding: 14px 16px; display: grid; gap: 8px; }
+.gram h3 { margin: 0; font-family: var(--font-jp); font-size: var(--step-1); font-weight: 600; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.gram .mean { font-weight: 500; }
+.gram .ex { border-left: 2px solid var(--ai-wash); padding-left: 10px; }
+.gram .ex .jp { font-family: var(--font-jp); font-size: var(--step-1); }
+.gram .ex .zh { color: var(--ink-soft); font-size: var(--step--1); }
+.gram .note { font-size: var(--step--1); color: var(--ink-soft); white-space: pre-line; }
+
+/* Stats */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.tile { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; }
+.tile b { display: block; font-size: var(--step-2); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tile span { font-size: var(--step--1); color: var(--ink-soft); }
+.lessons { display: grid; gap: 6px; }
+.lrow { display: grid; grid-template-columns: 48px minmax(0, 1fr) 76px; gap: 10px; align-items: center; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+.stack { display: flex; height: 12px; border-radius: 3px; overflow: hidden; background: var(--rule); }
+.stack i { display: block; height: 100%; }
+.stack .k { background: var(--matcha); } .stack .l { background: var(--yamabuki); }
+.week { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; }
+.week i { aspect-ratio: 1; border-radius: 3px; background: var(--rule); max-width: 100%; }
+.week i.on1 { background: color-mix(in srgb, var(--matcha) 45%, var(--rule)); }
+.week i.on2 { background: var(--matcha); }
+.week i.today { outline: 1px solid var(--ink-soft); }
+
+.form { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; }
+.form label { display: grid; gap: 4px; font-size: var(--step--1); color: var(--ink-soft); }
+.form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+h2 { font-size: var(--step-1); margin: 4px 0 0; text-wrap: balance; }
+.muted { color: var(--ink-soft); font-size: var(--step--1); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 8px 16px; border-radius: 6px; font-size: var(--step--1); z-index: 20; }
+@media (max-width: 420px) {
+  .list li { grid-template-columns: 10px minmax(0, 1fr) auto; }
+  .list li .m { grid-column: 2 / 3; grid-row: 2; }
+  .form .two { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>みんなの復習帳</h1>
+      <span class="meta" id="meta"></span>
+    </div>
+    <nav role="tablist" id="tabs">
+      <button role="tab" data-v="today" aria-selected="true">今日溫習</button>
+      <button role="tab" data-v="vocab" aria-selected="false">生字</button>
+      <button role="tab" data-v="grammar" aria-selected="false">文法</button>
+      <button role="tab" data-v="stats" aria-selected="false">進度</button>
+      <button role="tab" data-v="setup" aria-selected="false">設定</button>
+    </nav>
+  </header>
+  <main>
+    <section class="view" id="v-today"></section>
+    <section class="view" id="v-vocab" hidden></section>
+    <section class="view" id="v-grammar" hidden></section>
+    <section class="view" id="v-stats" hidden></section>
+    <section class="view" id="v-setup" hidden></section>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ===== 教材資料：みんなの日本語 初級I 第1–16課（核心生字＋文法） =====
+   每行：讀音|漢字|意思。冇漢字就留空。 */
+const VOCAB = {
+1: `わたし|私|我
+わたしたち|私たち|我哋
+あなた||你
+あのひと|あの人|嗰個人
+みなさん|皆さん|各位
+～さん||～先生／小姐
+～じん|～人|～國人
+せんせい|先生|老師（稱呼別人）
+きょうし|教師|教師（講自己職業）
+がくせい|学生|學生
+かいしゃいん|会社員|公司職員
+しゃいん|社員|～公司嘅職員
+ぎんこういん|銀行員|銀行職員
+いしゃ|医者|醫生
+けんきゅうしゃ|研究者|研究員
+だいがく|大学|大學
+びょういん|病院|醫院
+だれ|誰|邊個
+どなた||邊位（禮貌）
+～さい|～歳|～歲
+なんさい|何歳|幾多歲
+おいくつ||幾多歲（禮貌）
+はい||係
+いいえ||唔係
+はじめまして|初めまして|初次見面
+～からきました|～から来ました|我由～嚟
+どうぞよろしく おねがいします|どうぞよろしくお願いします|請多多指教
+しつれいですが|失礼ですが|唔好意思，請問…
+おなまえは？|お名前は？|你叫咩名？
+こちらは ～さんです||呢位係～`,
+2: `これ||呢個（近自己）
+それ||嗰個（近對方）
+あれ||嗰個（離兩個人都遠）
+この～||呢個～
+その～||嗰個～（近對方）
+あの～||嗰個～（遠）
+ほん|本|書
+じしょ|辞書|字典
+ざっし|雑誌|雜誌
+しんぶん|新聞|報紙
+ノート||筆記簿
+てちょう|手帳|記事簿
+めいし|名刺|卡片
+カード||卡
+えんぴつ|鉛筆|鉛筆
+ボールペン||原子筆
+かぎ|鍵|鎖匙
+とけい|時計|鐘／錶
+かさ|傘|遮
+かばん|鞄|袋
+くるま|車|車
+つくえ|机|書枱
+いす|椅子|櫈
+チョコレート||朱古力
+コーヒー||咖啡
+おみやげ|お土産|手信
+えいご|英語|英文
+にほんご|日本語|日文
+なん|何|咩嘢
+そう||係咁
+ちがいます|違います|唔係／錯咗
+あのう||嗯…（開口前猶豫）
+ほんの きもちです|ほんの気持ちです|小小心意
+どうぞ||請
+どうも ありがとう ございます||非常多謝
+これから おせわに なります|これからお世話になります|以後請多多關照
+こちらこそ よろしく||我先要請你多多指教`,
+3: `ここ||呢度
+そこ||嗰度（近對方）
+あそこ||嗰邊（遠）
+どこ||邊度
+こちら||呢邊（ここ嘅禮貌講法）
+そちら||嗰邊（禮貌）
+あちら||嗰邊遠處（禮貌）
+どちら||邊邊（どこ嘅禮貌講法）
+きょうしつ|教室|課室
+しょくどう|食堂|飯堂
+じむしょ|事務所|辦公室
+かいぎしつ|会議室|會議室
+うけつけ|受付|接待處
+ロビー||大堂
+へや|部屋|房間
+トイレ||廁所
+おてあらい|お手洗い|洗手間
+かいだん|階段|樓梯
+エレベーター||較
+エスカレーター||扶手電梯
+おくに|お国|（你嘅）國家
+かいしゃ|会社|公司
+うち||屋企
+でんわ|電話|電話
+くつ|靴|鞋
+ネクタイ||呔
+ワイン||紅酒
+うりば|売り場|（百貨公司）賣場
+ちか|地下|地庫
+～かい|～階|～樓
+なんがい|何階|幾樓
+～えん|～円|～円
+いくら||幾錢
+ひゃく|百|一百
+せん|千|一千
+まん|万|一萬
+すみません||唔該／對唔住
+～を みせて ください|～を見せてください|請俾我睇下～
+じゃ||咁…
+～を ください||請俾～我`,
+4: `おきます|起きます|起身
+ねます|寝ます|瞓覺
+はたらきます|働きます|返工
+やすみます|休みます|休息
+べんきょうします|勉強します|溫書／讀書
+おわります|終わります|完結
+デパート||百貨公司
+ぎんこう|銀行|銀行
+ゆうびんきょく|郵便局|郵局
+としょかん|図書館|圖書館
+びじゅつかん|美術館|美術館
+いま|今|而家
+～じ|～時|～點
+～ふん／～ぷん|～分|～分
+はん|半|半（30分）
+なんじ|何時|幾點
+なんぷん|何分|幾多分
+ごぜん|午前|上晝 a.m.
+ごご|午後|下晝 p.m.
+あさ|朝|朝早
+ひる|昼|晏晝
+ばん|晩|夜晚
+よる|夜|夜晚
+おととい||前日
+きのう|昨日|琴日
+きょう|今日|今日
+あした|明日|聽日
+あさって||後日
+けさ|今朝|今朝
+こんばん|今晩|今晚
+まいあさ|毎朝|每朝
+まいばん|毎晩|每晚
+まいにち|毎日|每日
+やすみ|休み|假期／休息
+ひるやすみ|昼休み|午休
+しけん|試験|考試
+かいぎ|会議|會議
+えいが|映画|電影
+げつようび|月曜日|星期一
+かようび|火曜日|星期二
+すいようび|水曜日|星期三
+もくようび|木曜日|星期四
+きんようび|金曜日|星期五
+どようび|土曜日|星期六
+にちようび|日曜日|星期日
+なんようび|何曜日|星期幾
+～から||由～（開始）
+～まで||到～（為止）
+～と～||～同～
+たいへんですね|大変ですね|好辛苦喎`,
+5: `いきます|行きます|去
+きます|来ます|嚟
+かえります|帰ります|返（屋企／國家）
+がっこう|学校|學校
+スーパー||超市
+えき|駅|車站
+ひこうき|飛行機|飛機
+ふね|船|船
+でんしゃ|電車|電車／火車
+ちかてつ|地下鉄|地鐵
+しんかんせん|新幹線|新幹線
+バス||巴士
+タクシー||的士
+じてんしゃ|自転車|單車
+あるいて|歩いて|行路
+ひと|人|人
+ともだち|友達|朋友
+かれ|彼|佢（男）／男朋友
+かのじょ|彼女|佢（女）／女朋友
+かぞく|家族|家人
+ひとりで|一人で|一個人
+せんしゅう|先週|上個星期
+こんしゅう|今週|今個星期
+らいしゅう|来週|下個星期
+せんげつ|先月|上個月
+こんげつ|今月|今個月
+らいげつ|来月|下個月
+きょねん|去年|舊年
+ことし|今年|今年
+らいねん|来年|出年
+～がつ|～月|～月
+なんがつ|何月|幾月
+ついたち|1日|1號
+ふつか|2日|2號
+みっか|3日|3號
+よっか|4日|4號
+いつか|5日|5號
+むいか|6日|6號
+なのか|7日|7號
+ようか|8日|8號
+ここのか|9日|9號
+とおか|10日|10號
+はつか|20日|20號
+なんにち|何日|幾號
+いつ||幾時
+たんじょうび|誕生日|生日
+ふつう|普通|慢車（每站停）
+きゅうこう|急行|急行
+とっきゅう|特急|特快
+つぎの|次の|下一班／下一個`,
+6: `たべます|食べます|食
+のみます|飲みます|飲
+すいます|吸います|吸（煙）
+みます|見ます|睇
+ききます|聞きます|聽
+よみます|読みます|讀
+かきます|書きます|寫／畫
+かいます|買います|買
+とります|撮ります|影（相）
+します||做
+あいます|会います|見（朋友）
+ごはん|ご飯|飯
+あさごはん|朝ごはん|早餐
+ひるごはん|昼ごはん|午餐
+ばんごはん|晩ごはん|晚餐
+パン||麵包
+たまご|卵|蛋
+にく|肉|肉
+さかな|魚|魚
+やさい|野菜|菜
+くだもの|果物|生果
+みず|水|水
+おちゃ|お茶|茶
+こうちゃ|紅茶|紅茶
+ぎゅうにゅう|牛乳|牛奶
+ジュース||果汁
+ビール||啤酒
+おさけ|お酒|酒
+てがみ|手紙|信
+レポート||報告
+しゃしん|写真|相
+みせ|店|舖頭
+にわ|庭|花園
+しゅくだい|宿題|功課
+テニス||網球
+サッカー||足球
+おはなみ|お花見|賞櫻
+なに|何|咩嘢
+いっしょに|一緒に|一齊
+ちょっと||少少
+いつも||成日／一向
+ときどき|時々|間中
+それから||然後
+ええ||係呀
+いいですね||好呀
+わかりました||明白
+じゃ、また あした|じゃ、また明日|咁聽日見`,
+7: `きります|切ります|剪／切
+おくります|送ります|寄
+あげます||俾（人）
+もらいます||收到（人哋俾）
+かします|貸します|借出
+かります|借ります|借入
+おしえます|教えます|教
+ならいます|習います|學
+かけます|[電話を]かけます|打（電話）
+て|手|手
+はし|箸|筷子
+スプーン||匙羹
+ナイフ||刀
+フォーク||叉
+はさみ||鉸剪
+パソコン||電腦
+ケータイ||手提電話
+メール||電郵
+ねんがじょう|年賀状|賀年卡
+ホッチキス||釘書機
+けしゴム|消しゴム|擦膠
+かみ|紙|紙
+はな|花|花
+シャツ||恤衫
+プレゼント||禮物
+にもつ|荷物|行李
+おかね|お金|錢
+きっぷ|切符|車飛
+クリスマス||聖誕節
+ちち|父|（自己）爸爸
+はは|母|（自己）媽媽
+おとうさん|お父さん|（人哋）爸爸
+おかあさん|お母さん|（人哋）媽媽
+もう||已經
+まだ||仲未
+これから||而家開始
+すてきですね|素敵ですね|好靚喎
+いらっしゃい||歡迎
+どうぞ おあがり ください|どうぞお上がりください|請入嚟
+しつれいします|失礼します|打擾晒
+～は いかがですか||～好唔好呀？（請食嘢）
+いただきます||我開動喇
+ごちそうさまでした||多謝款待`,
+8: `ハンサム（な）||靚仔
+きれい（な）|綺麗（な）|靚／乾淨
+しずか（な）|静か（な）|靜
+にぎやか（な）||熱鬧
+ゆうめい（な）|有名（な）|出名
+しんせつ（な）|親切（な）|親切
+げんき（な）|元気（な）|精神／健康
+ひま（な）|暇（な）|得閒
+べんり（な）|便利（な）|方便
+すてき（な）|素敵（な）|好正
+おおきい|大きい|大
+ちいさい|小さい|細
+あたらしい|新しい|新
+ふるい|古い|舊
+いい（よい）||好
+わるい|悪い|差／壞
+あつい|暑い|熱（天氣）
+あつい|熱い|熱（嘢）
+さむい|寒い|凍（天氣）
+つめたい|冷たい|凍（嘢）
+むずかしい|難しい|難
+やさしい|易しい|容易
+たかい|高い|貴／高
+やすい|安い|平
+ひくい|低い|矮
+おもしろい|面白い|有趣
+おいしい||好食
+いそがしい|忙しい|忙
+たのしい|楽しい|開心
+しろい|白い|白
+くろい|黒い|黑
+あかい|赤い|紅
+あおい|青い|藍
+さくら|桜|櫻花
+やま|山|山
+まち|町|市鎮
+たべもの|食べ物|食物
+ところ|所|地方
+りょう|寮|宿舍
+せいかつ|生活|生活
+しごと|仕事|工作
+どう||點樣
+どんな～||點樣嘅～
+とても||好（非常）
+あまり||唔係幾～（配否定）
+そして||而且
+～が、～||～，但係～
+おげんきですか|お元気ですか|你好嗎？
+そうですね||係喎（諗緊嘢）
+もう いっぱい いかがですか|もう一杯いかがですか|再嚟一杯好唔好？
+いいえ、けっこうです|いいえ、結構です|唔使喇，多謝
+そろそろ しつれいします|そろそろ失礼します|差唔多要走喇
+また いらっしゃって ください||得閒再嚟`,
+9: `わかります||明白
+あります||有（擁有）
+すき（な）|好き（な）|鍾意
+きらい（な）|嫌い（な）|唔鍾意
+じょうず（な）|上手（な）|叻
+へた（な）|下手（な）|唔叻
+のみもの|飲み物|飲品
+りょうり|料理|菜式／煮嘢
+スポーツ||運動
+やきゅう|野球|棒球
+ダンス||跳舞
+りょこう|旅行|旅行
+おんがく|音楽|音樂
+うた|歌|歌
+コンサート||音樂會
+カラオケ||卡拉OK
+かぶき|歌舞伎|歌舞伎
+え|絵|畫
+じ|字|字
+かんじ|漢字|漢字
+ひらがな||平假名
+かたかな||片假名
+ローマじ|ローマ字|羅馬字
+こまかい おかね|細かいお金|散紙
+チケット||飛
+じかん|時間|時間
+ようじ|用事|有事做
+やくそく|約束|約咗人／承諾
+アルバイト||兼職
+ごしゅじん|ご主人|（人哋）老公
+おっと|夫|（自己）老公
+しゅじん|主人|（自己）老公
+おくさん|奥さん|（人哋）老婆
+つま|妻|（自己）老婆
+こども|子ども|細路
+よく||好好咁／經常
+だいたい||大概
+たくさん||好多
+すこし|少し|少少
+ぜんぜん|全然|完全（唔）～
+はやく|早く／速く|早啲／快啲
+～から||因為～
+どうして||點解
+ざんねんですね|残念ですね|真係可惜
+また こんど おねがいします|また今度お願いします|下次先啦`,
+10: `あります||有（死物）
+います||有（人／動物）
+いろいろ（な）||各種各樣
+おとこの ひと|男の人|男人
+おんなの ひと|女の人|女人
+おとこの こ|男の子|男仔
+おんなの こ|女の子|女仔
+いぬ|犬|狗
+ねこ|猫|貓
+パンダ||熊貓
+ぞう|象|大笨象
+き|木|樹
+もの|物|嘢
+でんち|電池|電池
+はこ|箱|盒
+スイッチ||開關掣
+れいぞうこ|冷蔵庫|雪櫃
+テーブル||枱
+ベッド||床
+たな|棚|架
+ドア||門
+まど|窓|窗
+ポスト||郵筒
+ビル||大廈
+コンビニ||便利店
+こうえん|公園|公園
+きっさてん|喫茶店|咖啡室
+～や|～屋|～舖
+のりば|乗り場|上車處
+けん|県|縣
+うえ|上|上面
+した|下|下面
+まえ|前|前面
+うしろ||後面
+みぎ|右|右邊
+ひだり|左|左邊
+なか|中|裡面
+そと|外|外面
+となり|隣|隔籬
+ちかく|近く|附近
+あいだ|間|中間
+～や ～など||～同～等等
+いちばん した|一番下|最底
+どうも すみません||唔該晒`,
+11: `います|[子どもが]います|有（細路）
+います|[日本に]います|留喺（日本）
+かかります||要（時間／錢）
+やすみます|[会社を]休みます|請假（唔返工）
+ひとつ|1つ|一個
+ふたつ|2つ|兩個
+みっつ|3つ|三個
+よっつ|4つ|四個
+いつつ|5つ|五個
+むっつ|6つ|六個
+ななつ|7つ|七個
+やっつ|8つ|八個
+ここのつ|9つ|九個
+とお|10|十個
+いくつ||幾多個
+ひとり|1人|一個人
+ふたり|2人|兩個人
+～にん|～人|～個人
+～だい|～台|～部（機器、車）
+～まい|～枚|～張（薄嘅嘢）
+～かい|～回|～次
+りんご||蘋果
+みかん||柑
+サンドイッチ||三文治
+カレー ライス||咖喱飯
+アイスクリーム||雪糕
+きって|切手|郵票
+はがき||明信片
+ふうとう|封筒|信封
+りょうしん|両親|父母
+きょうだい|兄弟|兄弟姊妹
+あに|兄|（自己）哥哥
+おにいさん|お兄さん|（人哋）哥哥
+あね|姉|（自己）家姐
+おねえさん|お姉さん|（人哋）家姐
+おとうと|弟|（自己）細佬
+おとうとさん|弟さん|（人哋）細佬
+いもうと|妹|（自己）妹妹
+いもうとさん|妹さん|（人哋）妹妹
+がいこく|外国|外國
+りゅうがくせい|留学生|留學生
+クラス||班
+～じかん|～時間|～個鐘
+～しゅうかん|～週間|～個星期
+～かげつ|～か月|～個月
+～ねん|～年|～年
+～ぐらい||大約～
+どのくらい||幾耐／幾多
+ぜんぶで|全部で|總共
+みんな||全部（人）
+～だけ||淨係～
+かしこまりました||明白（店員用）
+いい てんきですね|いい天気ですね|好天喎
+おでかけですか|お出かけですか|出街呀？
+ちょっと ～まで||去～一陣
+いってらっしゃい|行ってらっしゃい|慢慢行（送人出門）
+いってきます|行ってきます|我出去喇
+ふなびん|船便|海郵
+こうくうびん|航空便|空郵
+おねがいします|お願いします|麻煩你`,
+12: `かんたん（な）|簡単（な）|簡單
+ちかい|近い|近
+とおい|遠い|遠
+はやい|速い|快
+はやい|早い|早
+おそい|遅い|慢／遲
+おおい|[人が]多い|（人）多
+すくない|[人が]少ない|（人）少
+あたたかい|暖かい|暖
+すずしい|涼しい|涼
+あまい|甘い|甜
+からい|辛い|辣
+おもい|重い|重
+かるい|軽い|輕
+いい|[コーヒーが]いい|（揀）～好
+きせつ|季節|季節
+はる|春|春天
+なつ|夏|夏天
+あき|秋|秋天
+ふゆ|冬|冬天
+てんき|天気|天氣
+あめ|雨|雨
+ゆき|雪|雪
+くもり|曇り|陰天
+ホテル||酒店
+くうこう|空港|機場
+うみ|海|海
+せかい|世界|世界
+パーティー||派對
+おまつり|お祭り|祭典
+すきやき|すき焼き|壽喜燒
+さしみ|刺身|魚生
+すし|寿司|壽司
+てんぷら|天ぷら|天婦羅
+ぶたにく|豚肉|豬肉
+とりにく|鶏肉|雞肉
+ぎゅうにく|牛肉|牛肉
+レモン||檸檬
+いけばな|生け花|插花
+もみじ|紅葉|紅葉
+どちら||邊個（兩樣揀一樣）
+どちらも||兩樣都
+いちばん|一番|最
+ずっと||～得多
+はじめて|初めて|第一次
+ただいま||我返嚟喇
+おかえりなさい|お帰りなさい|你返嚟喇
+すごいですね||好犀利
+でも||但係
+つかれました|疲れました|好攰`,
+13: `あそびます|遊びます|玩
+およぎます|泳ぎます|游水
+むかえます|迎えます|接（人）
+つかれます|疲れます|攰
+けっこんします|結婚します|結婚
+かいものします|買い物します|買嘢
+しょくじします|食事します|食飯
+さんぽします|散歩します|散步
+たいへん（な）|大変（な）|辛苦／大鑊
+ほしい|欲しい|想要
+ひろい|広い|闊
+せまい|狭い|窄
+プール||泳池
+かわ|川|河
+びじゅつ|美術|美術
+つり|釣り|釣魚
+スキー||滑雪
+しゅうまつ|週末|週末
+おしょうがつ|お正月|新年
+～ごろ||～左右（時間）
+なにか|何か|啲咩
+どこか||某個地方
+のどが かわきます|喉が渇きます|口渴
+おなかが すきます||肚餓
+そう しましょう||就咁做啦
+ごちゅうもんは？|ご注文は？|想叫咩？
+ていしょく|定食|套餐
+ぎゅうどん|牛丼|牛肉飯
+しょうしょう おまち ください|少々お待ちください|請稍等
+べつべつに|別々に|分開（俾錢）`,
+14: `つけます||開（燈／電器）
+けします|消します|熄（燈／電器）
+あけます|開けます|打開
+しめます|閉めます|閂
+いそぎます|急ぎます|趕
+まちます|待ちます|等
+もちます|持ちます|拎住
+とります|取ります|攞
+てつだいます|手伝います|幫手
+よびます|呼びます|叫（人／車）
+はなします|話します|講
+みせます|見せます|俾～睇
+おしえます|[住所を]教えます|話俾～知
+はじめます|始めます|開始
+ふります|[雨が]降ります|落（雨）
+コピーします||影印
+でんき|電気|燈／電
+エアコン||冷氣
+パスポート||護照
+なまえ|名前|名
+じゅうしょ|住所|地址
+ちず|地図|地圖
+しお|塩|鹽
+さとう|砂糖|糖
+もんだい|問題|問題
+こたえ|答え|答案
+よみかた|読み方|讀法
+～かた|～方|～嘅方法
+まっすぐ||直行
+ゆっくり||慢慢
+すぐ||即刻
+また||再
+あとで||之後
+もう すこし|もう少し|再多少少
+もう～||再～
+さあ||嚟啦
+あれ？||咦？
+しんごうを みぎへ まがって ください|信号を右へ曲がってください|喺紅綠燈轉右
+これで おねがいします||用呢張（錢）麻煩你
+おつり|お釣り|找錢`,
+15: `たちます|立ちます|企
+すわります|座ります|坐
+つかいます|使います|用
+おきます|置きます|放
+つくります|作ります|整／製造
+うります|売ります|賣
+しります|知ります|知道
+すみます|住みます|住
+けんきゅうします|研究します|研究
+しっています|知っています|知道（狀態）
+すんでいます|住んでいます|住喺
+しりょう|資料|資料
+カタログ||目錄
+じこくひょう|時刻表|時間表
+ふく|服|衫
+せいひん|製品|產品
+ソフト||軟件
+でんしじしょ|電子辞書|電子字典
+けいざい|経済|經濟
+しやくしょ|市役所|市政府
+こうこう|高校|高中
+はいしゃ|歯医者|牙醫
+どくしん|独身|單身
+おもいだします|思い出します|諗返起
+いらっしゃいます||在／喺度（尊敬語）`,
+16: `のります|[電車に]乗ります|搭（車）
+おります|[電車を]降ります|落（車）
+のりかえます|乗り換えます|轉車
+あびます|[シャワーを]浴びます|沖（涼）
+いれます|入れます|放入去
+だします|出します|拎出嚟／交
+おろします|[お金を]下ろします|提（錢）
+はいります|[大学に]入ります|入（大學）
+でます|[大学を]出ます|（大學）畢業
+おします|押します|撳
+のみます|[お酒を]飲みます|飲（酒）
+けんがくします|見学します|參觀
+でんわします|電話します|打電話
+わかい|若い|後生
+ながい|長い|長
+みじかい|短い|短
+あかるい|明るい|光／開朗
+くらい|暗い|暗
+せが たかい|背が高い|高（身材）
+あたまが いい|頭がいい|聰明
+からだ|体|身體
+あたま|頭|頭
+かみ|髪|頭髮
+かお|顔|面
+め|目|眼
+みみ|耳|耳仔
+はな|鼻|鼻
+くち|口|口
+は|歯|牙
+おなか||肚
+あし|足|腳
+サービス||服務
+ジョギング||跑步
+シャワー||花灑
+みどり|緑|綠色
+おてら|お寺|寺
+じんじゃ|神社|神社
+ばんごう|番号|號碼
+～ばん|～番|第～號
+どうやって||點樣（用咩方法）
+どの～||邊個～（三樣以上）
+どれ||邊個（三樣以上）
+いいえ、まだまだです||唔係，仲差好遠
+おひきだしですか|お引き出しですか|係咪提款？
+まず||首先
+つぎに|次に|跟住
+キャッシュカード||提款卡
+あんしょうばんごう|暗証番号|密碼
+きんがく|金額|金額
+かくにん|確認|確認
+ボタン||掣`
+};
+
+/* 文法：[句型, 意思, 例句（日）, 例句（中）, 補充] */
+const GRAMMAR = {
+1: [
+  ["N1 は N2 です", "N1 係 N2", "わたしは マイク・ミラーです。", "我係 Mike Miller。", "は 做助詞時讀「わ」。"],
+  ["N1 は N2 じゃ（では）ありません", "N1 唔係 N2", "サントスさんは 学生じゃ ありません。", "Santos 先生唔係學生。", "じゃ 係口語，では 比較正式。"],
+  ["S か", "疑問句：句尾加か", "ミラーさんは アメリカ人ですか。", "Miller 先生係美國人嗎？", "答：はい、アメリカ人です。／いいえ、アメリカ人じゃありません。"],
+  ["N も", "N 都係", "わたしも 会社員です。", "我都係公司職員。", "も 取代 は。"],
+  ["N1 の N2（所屬）", "N1 嘅 N2", "ミラーさんは IMC の 社員です。", "Miller 先生係 IMC 嘅職員。", ""],
+  ["～は 何歳ですか", "問年齡", "テレーザちゃんは 何歳ですか。…9歳です。", "Teresa 幾多歲？…9歲。", "禮貌講法：おいくつですか。"]
+],
+2: [
+  ["これ／それ／あれ は N です", "呢個／嗰個 係 N", "これは 辞書です。", "呢本係字典。", "これ 近自己，それ 近對方，あれ 離兩個人都遠。"],
+  ["この／その／あの N", "呢個／嗰個 N（後面一定要接名詞）", "この 本は わたしの です。", "呢本書係我嘅。", "✗ この は… ✓ これは… ✓ この本は…"],
+  ["そうです／そうじゃ ありません", "係／唔係（回答名詞句）", "それは テレホンカードですか。…はい、そうです。", "嗰張係電話卡嗎？…係。", ""],
+  ["S1 か、S2 か", "選擇疑問：係 S1 定 S2？", "これは「9」ですか、「7」ですか。…「9」です。", "呢個係「9」定「7」？…係「9」。", "唔可以答 はい／いいえ。"],
+  ["N1 の N2（內容／所有）", "關於 N1 嘅 N2／N1 擁有嘅 N2", "これは コンピューターの 本です。", "呢本係電腦書。", "わたしの（＝我嘅）可以省略後面嘅名詞。"]
+],
+3: [
+  ["ここ／そこ／あそこ は N（場所）です", "呢度／嗰度 係 N", "ここは 食堂です。", "呢度係飯堂。", ""],
+  ["N は 場所 です", "N 喺（某處）", "トイレは あそこです。", "廁所喺嗰邊。", "問：トイレは どこですか。"],
+  ["こちら／そちら／あちら／どちら", "ここ系列嘅禮貌講法", "エレベーターは どちらですか。…あちらです。", "較喺邊呀？…喺嗰邊。", "お国は どちらですか＝你係邊國人？"],
+  ["N1 の N2（產地／公司）", "邊度出產嘅 N2", "これは どこの ワインですか。…イタリアの ワインです。", "呢支係邊度嘅紅酒？…意大利嘅。", ""],
+  ["～は いくらですか", "～幾錢？", "この 時計は いくらですか。…18,600円です。", "呢隻錶幾錢？", ""]
+],
+4: [
+  ["今 ～時～分です", "而家係～點～分", "今 4時5分です。", "而家4點5分。", "4時 讀 よじ，7時 讀 しちじ，9時 讀 くじ。"],
+  ["V ます／ません／ました／ませんでした", "動詞時態：現在肯定／否定／過去肯定／否定", "きのう 勉強しませんでした。", "琴日冇溫書。", "ます形用嚟講習慣、將來同禮貌講法。"],
+  ["N（時間）に V", "喺某個時間做某事", "6時に 起きます。", "6點起身。", "數字時間要加 に；今日、明日、毎朝 等相對時間唔加 に；曜日 可加可唔加。"],
+  ["N1 から N2 まで", "由 N1 到 N2", "9時から 5時まで 働きます。", "9點到5點返工。", "可以分開用：銀行は 9時からです。"],
+  ["N1 と N2", "N1 同 N2（名詞並列）", "銀行の 休みは 土曜日と 日曜日です。", "銀行星期六同星期日休息。", ""],
+  ["S ね", "確認／同感：～喎、～呢", "毎日 10時まで 勉強します。…大変ですね。", "每日溫書到10點。…好辛苦喎。", ""]
+],
+5: [
+  ["N（場所）へ 行きます／来ます／帰ります", "去／嚟／返 某地方", "京都へ 行きます。", "去京都。", "へ 讀「え」，表示方向；都可以用 に。"],
+  ["どこ（へ）も 行きません", "邊度都唔去", "どこも 行きません。", "邊度都冇去。", "疑問詞＋も＋否定＝全部否定：何も、だれも。"],
+  ["N（交通工具）で 行きます", "搭～去", "電車で 行きます。", "搭電車去。", "行路去：歩いて 行きます（唔加で）。"],
+  ["N（人）と V", "同某人一齊做", "家族と 日本へ 来ました。", "同家人一齊嚟日本。", "一個人：一人で。"],
+  ["いつ", "幾時（冇固定時間點，唔加に）", "いつ 日本へ 来ましたか。…3月25日に 来ました。", "幾時嚟日本？…3月25號嚟。", ""],
+  ["S よ", "話俾對方知新資訊：～㗎、～呀", "この 電車は 甲子園へ 行きますか。…いいえ、行きません。次の「普通」ですよ。", "呢班車去甲子園嗎？…唔去。下一班慢車先去㗎。", ""]
+],
+6: [
+  ["N を V（他動詞）", "を 標示動作對象", "ジュースを 飲みます。", "飲果汁。", "を 讀「お」。"],
+  ["N を します", "做／玩 N", "サッカーを します。", "踢波。", "宿題を します＝做功課。"],
+  ["何を しますか", "做咩？", "月曜日 何を しますか。…京都へ 行きます。", "星期一做咩？…去京都。", ""],
+  ["N（場所）で V", "喺某處做某事", "駅で 新聞を 買います。", "喺車站買報紙。", "で＝動作發生嘅地方。"],
+  ["V ませんか", "邀請：不如～？", "いっしょに 京都へ 行きませんか。…ええ、いいですね。", "不如一齊去京都？…好呀。", "比 ましょう 更客氣，顧及對方意願。"],
+  ["V ましょう", "提議：一齊～啦", "ちょっと 休みましょう。", "休息一陣啦。", ""]
+],
+7: [
+  ["N（工具／手段）で V", "用 N 做", "はしで 食べます。", "用筷子食。", "日本語で レポートを 書きます＝用日文寫報告。"],
+  ["「詞」は ～語で 何ですか", "～用～語點講？", "「Thank you」は 日本語で 何ですか。…「ありがとう」です。", "Thank you 日文點講？", ""],
+  ["N（人）に あげます／かします／おしえます", "俾／借／教 某人", "木村さんに 花を あげました。", "我送咗花俾木村小姐。", "に 標示接受者。"],
+  ["N（人）に／から もらいます／かります／ならいます", "由某人度 收到／借／學", "カリナさんに CD を 借りました。", "我問 Karina 借咗 CD。", "對方係機構（學校、公司）用 から。"],
+  ["もう V ました", "已經～咗", "もう 荷物を 送りましたか。…はい、もう 送りました。／いいえ、まだです。", "寄咗行李未？…寄咗喇。／仲未。", "仲未：まだです（唔好答 送りませんでした）。"]
+],
+8: [
+  ["な形容詞／い形容詞", "兩種形容詞", "ワット先生は 親切です。富士山は 高いです。", "Watt 老師好親切。富士山好高。", "注意：きれい、ゆうめい、きらい 係 な形容詞。"],
+  ["N は な-adj [な] じゃ ありません", "な形容詞否定", "あそこは 静かじゃ ありません。", "嗰度唔靜。", ""],
+  ["N は い-adj（～い→～くない）です", "い形容詞否定", "この 本は おもしろくないです。", "呢本書唔好睇。", "いい 嘅否定係 よくないです。"],
+  ["な-adj な N／い-adj N", "形容詞修飾名詞", "奈良は 静かな 町です。富士山は 高い 山です。", "奈良係個寧靜嘅市鎮。", ""],
+  ["とても／あまり", "好／唔係幾（あまり 配否定）", "北京は とても 寒いです。この 本は あまり おもしろくないです。", "北京好凍。呢本書唔係幾好睇。", ""],
+  ["N は どうですか／N1 は どんな N2 ですか", "點樣？／係點樣嘅 N2？", "日本の 生活は どうですか。…楽しいです。", "日本生活點呀？…好開心。", ""],
+  ["S1 が、S2", "S1，但係 S2", "日本の 食べ物は おいしいですが、高いです。", "日本嘢好食，但係貴。", ""]
+],
+9: [
+  ["N が あります／わかります", "有 N／明白 N", "わたしは イタリア語が わかります。", "我識意大利文。", "對象用 が 唔用 を。"],
+  ["N が 好きです／嫌いです／上手です／下手です", "鍾意／唔鍾意／叻／唔叻 N", "わたしは イタリア料理が 好きです。", "我鍾意意大利菜。", "上手 唔可以用嚟講自己（謙虛），講自己用 得意 或 下手。"],
+  ["どんな N", "咩類型嘅 N", "どんな スポーツが 好きですか。…サッカーが 好きです。", "你鍾意咩運動？…足球。", ""],
+  ["よく／だいたい／たくさん／少し／あまり／全然", "程度副詞", "英語が よく わかります。日本語が 全然 わかりません。", "英文好明白。日文完全唔明。", "あまり、全然 配否定。"],
+  ["S1 から、S2", "因為 S1，所以 S2", "時間が ありませんから、新聞を 読みません。", "因為冇時間，所以唔睇報紙。", ""],
+  ["どうして ～か", "點解？答：～からです", "どうして 朝 新聞を 読みませんか。…時間が ありませんから。", "點解朝早唔睇報紙？…因為冇時間。", ""]
+],
+10: [
+  ["場所 に N が あります／います", "某處有 N", "あそこに 男の 人が います。机の 上に 写真が あります。", "嗰度有個男人。枱上面有張相。", "あります＝死物、植物；います＝人、動物。"],
+  ["場所 に 何／だれ が いますか", "某處有咩／有邊個？", "庭に だれが いますか。…だれも いません。", "花園有冇人？…一個都冇。", ""],
+  ["N は 場所 に あります／います", "N 喺某處（講位置）", "東京ディズニーランドは 千葉県に あります。", "東京迪士尼喺千葉縣。", "同上一句比：主角（は）唔同。"],
+  ["N1（物／人／場所）の N2（位置）", "N1 嘅上面／下面／隔籬…", "机の 上に 写真が あります。郵便局は 銀行の 隣です。", "枱上面有相。郵局喺銀行隔籬。", "上、下、前、うしろ、右、左、中、外、隣、近く、間。"],
+  ["N1 や N2（など）", "N1 同 N2 等等（舉例）", "箱の 中に 手紙や 写真が あります。", "盒入面有信同相等等。", "と＝全部列出；や＝舉幾個例。"]
+],
+11: [
+  ["數量詞（つ、人、台、枚、回）", "數嘢嘅量詞", "りんごを 4つ 買いました。", "買咗4個蘋果。", "1人＝ひとり，2人＝ふたり，3人以上＝～にん。"],
+  ["數量詞 嘅位置", "放喺助詞後、動詞前", "外国人の 学生が 2人 います。", "有兩個外國學生。", ""],
+  ["期間（何時間／何日／何週間／何か月／何年）", "幾耐", "国で 2か月 日本語を 勉強しました。", "喺自己國家學咗兩個月日文。", "期間後面唔加 に。"],
+  ["期間 に ～回 V", "每段時間做幾多次", "1か月に 2回 映画を 見ます。", "一個月睇兩次戲。", ""],
+  ["數量詞／N だけ", "淨係", "休みは 日曜日だけです。", "淨係星期日放假。", ""],
+  ["どのくらい／～ぐらい", "幾耐／大約", "東京から 大阪まで 新幹線で どのくらい かかりますか。…2時間半 かかります。", "東京去大阪搭新幹線要幾耐？…兩個半鐘。", ""]
+],
+12: [
+  ["N／な-adj でした・じゃ ありませんでした", "名詞、な形容詞過去式", "きのうは 雨でした。きのうの 試験は 簡単じゃ ありませんでした。", "琴日落雨。琴日考試唔簡單。", ""],
+  ["い-adj（～い→～かった）です・～くなかったです", "い形容詞過去式", "きのうは 暑かったです。パーティーは 楽しくなかったです。", "琴日好熱。個派對唔好玩。", "いい→よかったです。"],
+  ["N1 は N2 より adj です", "N1 比 N2 更～", "この 車は あの 車より 大きいです。", "呢架車比嗰架大。", ""],
+  ["N1 と N2 と どちらが adj ですか", "N1 同 N2 邊個更～？", "サッカーと 野球と どちらが おもしろいですか。…サッカーの ほうが おもしろいです。", "足球同棒球邊樣好玩啲？…足球好玩啲。", "一樣：どちらも。"],
+  ["N1［の 中］で 何／どこ／だれ／いつ が いちばん adj ですか", "N1 之中邊個最～？", "日本料理［の 中］で 何が いちばん おいしいですか。…てんぷらが いちばん おいしいです。", "日本菜之中咩最好食？…天婦羅最好食。", ""]
+],
+13: [
+  ["N が ほしいです", "想要 N", "わたしは 友達が ほしいです。", "我想要朋友。", "い形容詞變化：ほしくないです。講第三者唔用。"],
+  ["V ます形 たいです", "想做～", "わたしは 沖縄へ 行きたいです。", "我想去沖繩。", "をorが都得：てんぷらを／が 食べたいです。否定：～たくないです。"],
+  ["場所 へ V ます形／N に 行きます", "去某處做某事（目的）", "神戸へ インド料理を 食べに 行きます。", "去神戶食印度菜。", "N に：京都へ 花見に 行きます。"],
+  ["どこか／何か", "某個地方／啲咩", "冬休みは どこか［へ］ 行きましたか。…はい、行きました。", "寒假有冇去邊？…有。", "へ、を 可以省略。"],
+  ["ご～", "尊敬語前綴", "ご注文は？", "想叫啲咩？", ""]
+],
+14: [
+  ["動詞分類（I／II／III 類）", "三類動詞", "I：かきます、のみます　II：たべます、みます　III：きます、します", "", "II 類：ます前係 え段，或者 みます、おきます 等特別字。"],
+  ["て形 變化規則", "I類：い・ち・り→って　み・び・に→んで　き→いて　ぎ→いで　し→して　II類：ます→て　III類：きて、して", "かいます→かって　のみます→のんで　かきます→かいて　いそぎます→いそいで　はなします→はなして", "", "例外：いきます→いって。"],
+  ["V て ください", "請～", "すみませんが、この 漢字の 読み方を 教えて ください。", "唔好意思，請話我知呢個漢字點讀。", ""],
+  ["V て います（進行中）", "而家做緊～", "ミラーさんは 今 電話を かけて います。", "Miller 先生而家打緊電話。", ""],
+  ["V ます形 ましょうか", "提出幫手：等我～吖？", "手伝いましょうか。…すみません。お願いします。", "使唔使我幫手？…唔該，麻煩你。", ""],
+  ["N が V（描述現象）", "描寫眼前情況用 が", "雨が 降って います。", "落緊雨。", ""]
+],
+15: [
+  ["V て も いいです", "可以～", "写真を 撮っても いいですか。", "可唔可以影相？", "回答：ええ、いいですよ。／すみません、ちょっと…。"],
+  ["V て は いけません", "唔可以～（禁止）", "ここで たばこを 吸っては いけません。", "呢度唔可以食煙。", "對上司唔好用，多數係規則或上對下。"],
+  ["V て います（狀態／結果）", "結咗婚／住喺／知道 等狀態", "わたしは 結婚して います。わたしは 田中さんを 知って います。", "我結咗婚。我識田中先生。", "知って います 嘅否定係 知りません（唔係 知っていません）。"],
+  ["V て います（習慣／職業）", "長期做緊嘅事、工作", "IMC は コンピューターソフトを 作って います。", "IMC 係做電腦軟件嘅。", ""],
+  ["N（場所）に V（入ります／座ります／乗ります）", "に 表示動作到達點", "ここに 座って ください。", "請坐呢度。", ""],
+  ["N1 に N2 を V（置きます／書きます）", "將 N2 放／寫 喺 N1", "ここに 車を 止めて ください。", "請將車停喺度。", ""]
+],
+16: [
+  ["V1 て、V2 て、V3", "做完 V1，再 V2，再 V3（順序）", "朝 ジョギングを して、シャワーを 浴びて、会社へ 行きます。", "朝早跑完步，沖完涼，再返公司。", "時態睇最後一個動詞。"],
+  ["い-adj（～い→～くて）、～", "連接い形容詞", "ミラーさんは 若くて、元気です。", "Miller 先生又後生又精神。", "いい→よくて。"],
+  ["N／な-adj で、～", "連接名詞、な形容詞", "カリナさんは インドネシア人で、富士大学の 留学生です。", "Karina 係印尼人，係富士大學嘅留學生。", "奈良は 静かで、きれいな 町です。"],
+  ["V1 て から、V2", "做完 V1 之後先做 V2", "仕事が 終わって から、飲みに 行きます。", "收工之後去飲嘢。", "強調先後次序。"],
+  ["N1 は N2 が adj", "N1 嘅 N2 好～（描述特徵）", "大阪は 食べ物が おいしいです。", "大阪啲嘢好食。", "ドイツの フランケンは ワインが 有名です。"],
+  ["どうやって", "點樣（方法）", "大学まで どうやって 行きますか。…京都駅から 16番の バスに 乗って、大学前で 降ります。", "點去大學？…喺京都站搭16號巴士，大學前落車。", ""],
+  ["どれ／どの N", "三樣以上揀一樣", "ミラーさんの 傘は どれですか。…あの 青い 傘です。", "邊把係 Miller 先生嘅遮？…嗰把藍色嘅。", "兩樣揀一樣用 どちら。"]
+]
+};
+
+/* ===== 卡片 ===== */
+const BUILTIN = [];
+for (const L of Object.keys(VOCAB)) {
+  VOCAB[L].trim().split("\n").forEach((line) => {
+    const [kana, kanji, mean] = line.split("|");
+    BUILTIN.push({ id: "v" + L + ":" + kana + ":" + kanji + ":" + mean, t: "v", L: +L, kana, kanji, mean });
+  });
+}
+for (const L of Object.keys(GRAMMAR)) {
+  GRAMMAR[L].forEach((g, i) => {
+    BUILTIN.push({ id: "g" + L + ":" + g[0], t: "g", L: +L, p: g[0], mean: g[1], ex: g[2], zh: g[3], note: g[4] });
+  });
+}
+let custom = []; // 老師筆記（db 嘅 cards collection）
+let CARDS = BUILTIN.slice();
+let BYID = new Map(CARDS.map((c) => [c.id, c]));
+function rebuildCards() {
+  CARDS = BUILTIN.concat(custom);
+  BYID = new Map(CARDS.map((c) => [c.id, c]));
+}
+const maxLesson = () => Math.max(16, ...CARDS.map((c) => c.L || 0));
+
+/* ===== 狀態 ===== */
+const LS_KEY = "minna-fukushu-v1";
+const today = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+function freshState() {
+  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true }, c: {}, log: {}, nt: { d: 0, n: 0 }, upd: 0 };
+}
+function normalize(s) {
+  const f = freshState();
+  s = s && typeof s === "object" ? s : {};
+  return {
+    settings: Object.assign(f.settings, s.settings || {}),
+    c: s.c || {}, log: s.log || {}, nt: s.nt || f.nt, upd: s.upd || 0
+  };
+}
+let S = freshState();
+try { const raw = localStorage.getItem(LS_KEY); if (raw) S = normalize(JSON.parse(raw)); } catch (e) {}
+
+let db = null, stateRef = null, writing = false, writeAgain = false, saveTimer = null;
+function save() {
+  S.upd = Date.now();
+  try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {}
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveRemote, 1500);
+}
+async function saveRemote() {
+  if (!stateRef) return;
+  if (writing) { writeAgain = true; return; }
+  writing = true;
+  try { await stateRef.set(JSON.parse(JSON.stringify(S))); } catch (e) { if (e && e.code === "quota_exceeded") toast("雲端儲存已滿，進度只存喺呢部機"); }
+  writing = false;
+  if (writeAgain) { writeAgain = false; saveRemote(); }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && saveTimer) { clearTimeout(saveTimer); saveRemote(); } });
+
+/* ===== 間隔重複 ===== */
+function schedule(st, g) {
+  st = Object.assign({ i: 0, e: 2.5, r: 0, l: 0 }, st);
+  if (g === 0) { st.l++; st.r = 0; st.i = 0; st.e = Math.max(1.3, st.e - 0.2); }
+  else if (g === 1) { st.i = st.r === 0 ? 1 : Math.max(st.i + 1, Math.round(st.i * 1.2)); st.e = Math.max(1.3, st.e - 0.15); st.r++; }
+  else if (g === 2) { st.i = st.r === 0 ? 1 : st.r === 1 ? 3 : Math.max(st.i + 1, Math.round(st.i * st.e)); st.r++; }
+  else { st.i = st.r === 0 ? 3 : st.r === 1 ? 6 : Math.max(st.i + 2, Math.round(st.i * st.e * 1.3)); st.e += 0.15; st.r++; }
+  st.d = today() + st.i; st.s = today();
+  return st;
+}
+const fmtIv = (i) => i === 0 ? "今日再嚟" : i < 30 ? i + "日" : i < 365 ? Math.round(i / 30) + "個月" : (i / 365).toFixed(1) + "年";
+function status(c) {
+  const st = S.c[c.id];
+  if (!st) return "new";
+  if (st.d <= today()) return "due";
+  return st.i >= 7 ? "known" : "learning";
+}
+const inScope = (c) => c.L <= S.settings.cur && (c.t === "v" || S.settings.gram);
+
+/* ===== 今日溫習 ===== */
+let session = null;
+function buildSession() {
+  const t = today();
+  if (S.nt.d !== t) S.nt = { d: t, n: 0 };
+  const scope = CARDS.filter(inScope);
+  const due = scope.filter((c) => S.c[c.id] && S.c[c.id].d <= t).sort((a, b) => S.c[a.id].d - S.c[b.id].d);
+  const left = Math.max(0, S.settings.newPerDay - S.nt.n);
+  const fresh = scope.filter((c) => !S.c[c.id]).sort((a, b) => a.L - b.L).slice(0, left);
+  // 新卡穿插喺舊卡之間
+  const q = []; let ni = 0;
+  due.forEach((c, i) => { q.push(c.id); if (i % 3 === 2 && ni < fresh.length) q.push(fresh[ni++].id); });
+  while (ni < fresh.length) q.push(fresh[ni++].id);
+  session = { q, i: 0, shown: false, cram: false, done: 0, total: q.length, title: "" };
+}
+function startCram(L, type) {
+  const ids = CARDS.filter((c) => c.L === L && (!type || c.t === type)).map((c) => c.id);
+  for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  session = { q: ids, i: 0, shown: false, cram: true, done: 0, total: ids.length, title: "第" + L + "課 自由練習" };
+  go("today");
+}
+function extraNew(n) {
+  const fresh = CARDS.filter((c) => inScope(c) && !S.c[c.id]).sort((a, b) => a.L - b.L).slice(0, n);
+  session = { q: fresh.map((c) => c.id), i: 0, shown: false, cram: false, done: 0, total: fresh.length, title: "加多 " + fresh.length + " 張新卡" };
+  renderToday();
+}
+
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+const canSpeak = "speechSynthesis" in window;
+function speak(text) {
+  if (!canSpeak) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text.replace(/[～\[\]［］]/g, "").replace(/（.*?）/g, ""));
+    u.lang = "ja-JP"; u.rate = 0.85;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+const jpOf = (c) => c.t === "v" ? (c.kanji || c.kana) : c.p;
+
+function cardFace(c, shown) {
+  const st = S.c[c.id];
+  const tags = [`<span>第${c.L}課 · ${c.t === "v" ? "生字" : "文法"}</span>`];
+  if (!st) tags.push(`<span class="pill new">新</span>`);
+  else if (st.l > 0 && st.r === 0) tags.push(`<span class="pill lapse">唔記得咗</span>`);
+  if (c.src) tags.push(`<span class="pill note">老師筆記</span>`);
+  const zhFirst = c.t === "v" && S.settings.dir === "zj";
+  let front, back;
+  if (c.t === "v") {
+    const ruby = c.kanji ? c.kana : "";
+    if (zhFirst) {
+      front = `<div class="face"><div class="ruby"></div><div class="big zh">${esc(c.mean)}</div></div>`;
+      back = `<div class="answer"><div class="jp" style="font-size:1.6rem">${esc(c.kanji || c.kana)}</div>${c.kanji ? `<div class="zh">${esc(c.kana)}</div>` : ""}${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}</div>`;
+    } else {
+      front = `<div class="face"><div class="ruby">${shown ? esc(ruby) : ""}</div><div class="big">${esc(c.kanji || c.kana)}</div></div>`;
+      back = `<div class="answer"><div class="mean">${esc(c.mean)}</div>${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}</div>`;
+    }
+  } else {
+    front = `<div class="face"><div class="ruby">呢個文法點用？</div><div class="big pattern">${esc(c.p)}</div></div>`;
+    back = `<div class="answer"><div class="mean">${esc(c.mean)}</div>${c.ex ? `<div class="jp">${esc(c.ex)}</div>` : ""}${c.zh ? `<div class="zh">${esc(c.zh)}</div>` : ""}${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}</div>`;
+  }
+  return `<div class="card" id="card" role="button" tabindex="0" aria-label="${shown ? "答案" : "撳一下睇答案"}">
+    <div class="tag">${tags.join("")}</div>
+    ${front}
+    ${shown ? back : `<div class="hint">撳張卡（或者空白鍵）睇答案</div>`}
+  </div>`;
+}
+
+function renderToday() {
+  const el = document.getElementById("v-today");
+  if (!session) buildSession();
+  const s = session;
+  updateMeta();
+  if (s.i >= s.q.length) {
+    const scope = CARDS.filter(inScope);
+    const newLeft = scope.filter((c) => !S.c[c.id]).length;
+    el.innerHTML = `<div class="done">
+      <div class="stamp">済</div>
+      <h2>${s.cram ? "練習完" : s.total ? "今日份溫晒喇" : "今日冇卡要溫"}</h2>
+      <p class="muted">${s.total ? `頭先溫咗 ${s.done} 次。` : ""}今日總共溫咗 ${S.log[today()] || 0} 次，第1–${S.settings.cur}課仲有 ${newLeft} 張未學嘅卡。</p>
+      <div class="row" style="justify-content:center">
+        ${newLeft ? `<button class="btn primary" id="more10">再學 10 張新卡</button>` : ""}
+        ${s.cram ? `<button class="btn" id="backToday">返去今日溫習</button>` : ""}
+        <button class="btn ghost" id="toVocab">揀一課自由練習</button>
+      </div></div>`;
+    const m = document.getElementById("more10"); if (m) m.onclick = () => extraNew(10);
+    const b = document.getElementById("backToday"); if (b) b.onclick = () => { session = null; renderToday(); };
+    document.getElementById("toVocab").onclick = () => go("vocab");
+    return;
+  }
+  const c = BYID.get(s.q[s.i]);
+  if (!c) { s.i++; return renderToday(); }
+  const pct = s.total ? Math.round((Math.min(s.i, s.total) / s.total) * 100) : 0;
+  const st = S.c[c.id];
+  let gradeHtml = "";
+  if (s.shown) {
+    if (s.cram) {
+      gradeHtml = `<div class="grades two"><button class="g0" data-g="0">唔記得<small>今日再溫</small></button><button class="g2" data-g="2">記得<small>下一張</small></button></div>`;
+    } else {
+      const labels = ["唔記得", "諗咗好耐", "記得", "好易"];
+      gradeHtml = `<div class="grades">${labels.map((l, g) => `<button class="g${g}" data-g="${g}">${l}<small>${fmtIv(schedule(st, g).i)}</small></button>`).join("")}</div>`;
+    }
+  }
+  el.innerHTML = `
+    <div class="progress"><span>${esc(s.title || "今日溫習")}</span><div class="bar"><i style="width:${pct}%"></i></div><span>${Math.max(0, s.q.length - s.i)} 張剩</span></div>
+    ${cardFace(c, s.shown)}
+    ${gradeHtml}
+    <div class="row">
+      ${canSpeak ? `<button class="btn small" id="say">聽發音</button>` : ""}
+      ${s.shown ? `<button class="btn small" id="askBtn">${c.t === "g" ? "用 Claude 練習造句" : "叫 Claude 俾例句"}</button>` : ""}
+    </div>
+    <div id="aiSlot"></div>`;
+  const card = document.getElementById("card");
+  const flip = () => { if (!s.shown) { s.shown = true; renderToday(); if (c.t === "v" && S.settings.dir === "zj") speak(c.kana); } };
+  card.onclick = flip;
+  card.onkeydown = (e) => { if (e.key === "Enter") flip(); };
+  el.querySelectorAll(".grades button").forEach((b) => (b.onclick = () => answer(c, +b.dataset.g)));
+  const say = document.getElementById("say"); if (say) say.onclick = (e) => { e.stopPropagation(); speak(c.t === "v" ? c.kana : (s.shown ? c.ex || c.p : c.p)); };
+  const ask = document.getElementById("askBtn"); if (ask) ask.onclick = () => openAI(c, document.getElementById("aiSlot"));
+}
+
+function answer(c, g) {
+  const s = session;
+  if (s.cram) {
+    if (g === 0) { S.c[c.id] = Object.assign({}, schedule(S.c[c.id], 0)); s.q.splice(Math.min(s.q.length, s.i + 4), 0, c.id); }
+  } else {
+    if (!S.c[c.id]) { S.nt.d = today(); S.nt.n++; }
+    S.c[c.id] = schedule(S.c[c.id], g);
+    if (g === 0) s.q.splice(Math.min(s.q.length, s.i + 4), 0, c.id);
+  }
+  S.log[today()] = (S.log[today()] || 0) + 1;
+  s.done++; s.i++; s.shown = false;
+  save(); renderToday();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (current !== "today" || !session || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if (e.key === " ") { e.preventDefault(); if (!session.shown) { session.shown = true; renderToday(); } }
+  const n = { "1": 0, "2": 1, "3": 2, "4": 3 }[e.key];
+  if (n != null && session.shown && session.i < session.q.length) {
+    const c = BYID.get(session.q[session.i]);
+    if (session.cram && n !== 0 && n !== 2) return;
+    answer(c, n);
+  }
+});
+
+/* ===== Claude 練習（sample） ===== */
+let samplePromise = null;
+const getSample = () => (samplePromise ||= (window.claude && window.claude.use ? window.claude.use("sample") : Promise.resolve(null)));
+function openAI(c, slot) {
+  const isG = c.t === "g";
+  slot.innerHTML = `<div class="ai-box">
+    ${isG ? `<label class="muted" for="aiIn">用「${esc(c.p)}」造一句（日文），Claude 幫你改：</label><textarea id="aiIn" placeholder="例：${esc((c.ex || "").split("。")[0])}。"></textarea>` : `<span class="muted">用「${esc(c.kanji || c.kana)}」造兩句簡單例句，只用第${S.settings.cur}課或之前學過嘅文法。</span>`}
+    <div class="row"><button class="btn primary small" id="aiGo">${isG ? "幫我改" : "俾例句我"}</button><span class="muted" id="aiState"></span></div>
+    <div class="ai-out" id="aiOut"></div></div>`;
+  const out = slot.querySelector("#aiOut"), state = slot.querySelector("#aiState"), go = slot.querySelector("#aiGo");
+  go.onclick = async () => {
+    const sample = await getSample();
+    if (!sample) { state.textContent = "呢度用唔到 Claude（要喺 claude.ai 打開）"; return; }
+    let prompt;
+    const lvl = `學生用緊《みんなの日本語》初級，上到第${S.settings.cur}課。請用廣東話口語（繁體字）解釋，日文例句用漢字＋假名，例句後面用（）附中文意思。唔好用 markdown 標題或粗體，保持簡短。`;
+    if (isG) {
+      const t = slot.querySelector("#aiIn").value.trim();
+      if (!t) { state.textContent = "先寫一句先"; return; }
+      prompt = `你係一位耐心嘅日文老師。${lvl}\n文法點（第${c.L}課）：${c.p}（${c.mean}）\n學生造嘅句：「${t}」\n請：1. 一句講啱定錯；2. 如果有錯，寫出改正版本；3. 用兩三句解釋（包括助詞、變化）；4. 再俾一句用同一文法嘅例句。`;
+    } else {
+      prompt = `你係一位日文老師。${lvl}\n生字（第${c.L}課）：${c.kanji || c.kana}（${c.kana}，${c.mean}）\n請用呢個生字造兩句短例句，只用第${S.settings.cur}課或之前學過嘅文法同生字。每句一行，格式：日文句子（中文意思）。最後加一行小貼士，講呢個字常見錯誤或搭配。`;
+    }
+    go.disabled = true; state.textContent = "Claude 諗緊…"; out.textContent = "";
+    try {
+      await sample(prompt, { onText: ({ text }) => { out.textContent = text; state.textContent = ""; }, cache: isG ? false : undefined });
+      state.textContent = "";
+    } catch (e) {
+      const msg = { not_granted: "你未允許呢頁用 Claude", rate_limited: "太密喇，等一陣再試", cancelled: "已停止" }[e && e.code];
+      state.textContent = msg || "Claude 暫時答唔到，等陣再試";
+    }
+    go.disabled = false;
+  };
+}
+
+/* ===== 生字 ===== */
+let vocabL = 16, gramL = 16, vocabQ = "";
+function lessonChips(sel, id) {
+  let h = `<div class="chips" id="${id}">`;
+  for (let L = 1; L <= maxLesson(); L++) h += `<button aria-pressed="${L === sel}" data-l="${L}" class="${L > S.settings.cur ? "future" : ""}">${L}</button>`;
+  return h + "</div>";
+}
+function renderVocab() {
+  const el = document.getElementById("v-vocab");
+  const q = vocabQ.trim().toLowerCase();
+  const items = CARDS.filter((c) => c.t === "v" && (q ? [c.kana, c.kanji, c.mean].join(" ").toLowerCase().includes(q) : c.L === vocabL));
+  el.innerHTML = `
+    <input type="search" id="vq" placeholder="搵字：假名、漢字或者中文" value="${esc(vocabQ)}" aria-label="搵字">
+    ${q ? `<p class="muted">搵到 ${items.length} 個</p>` : lessonChips(vocabL, "vchips")}
+    ${q ? "" : `<div class="row" style="justify-content:space-between"><h2>第${vocabL}課 · ${items.length} 個生字</h2><button class="btn primary small" id="cramV">練習呢課</button></div>`}
+    <div class="legend"><span><i class="dot"></i>未學</span><span><i class="dot learning"></i>學緊</span><span><i class="dot known"></i>記得</span><span><i class="dot due"></i>今日要溫</span></div>
+    <ul class="list">${items.map((c) => `<li><i class="dot ${status(c)}"></i><div class="w">${esc(c.kanji || c.kana)}${c.kanji ? `<small>${esc(c.kana)}</small>` : ""}</div><div class="m">${esc(c.mean)}${c.src ? ` <span class="pill note">老師</span>` : ""}${q ? ` <span class="muted">第${c.L}課</span>` : ""}</div>${canSpeak ? `<button class="icon-btn" data-say="${esc(c.kana)}" aria-label="聽發音">聽</button>` : "<span></span>"}</li>`).join("")}</ul>`;
+  const vq = document.getElementById("vq");
+  vq.oninput = () => { vocabQ = vq.value; renderVocab(); const n = document.getElementById("vq"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+  el.querySelectorAll("#vchips button").forEach((b) => (b.onclick = () => { vocabL = +b.dataset.l; renderVocab(); }));
+  el.querySelectorAll("[data-say]").forEach((b) => (b.onclick = () => speak(b.dataset.say)));
+  const cv = document.getElementById("cramV"); if (cv) cv.onclick = () => startCram(vocabL, "v");
+}
+
+/* ===== 文法 ===== */
+function renderGrammar() {
+  const el = document.getElementById("v-grammar");
+  const items = CARDS.filter((c) => c.t === "g" && c.L === gramL);
+  el.innerHTML = `${lessonChips(gramL, "gchips")}
+    <div class="row" style="justify-content:space-between"><h2>第${gramL}課文法</h2><button class="btn primary small" id="cramG">練習呢課文法</button></div>
+    ${items.length ? items.map((c, i) => `<article class="gram">
+      <h3><span>${esc(c.p)}</span>${c.src ? `<span class="pill note">老師筆記</span>` : `<i class="dot ${status(c)}" title="${status(c)}"></i>`}</h3>
+      <div class="mean">${esc(c.mean)}</div>
+      ${c.ex ? `<div class="ex"><div class="jp">${esc(c.ex)}</div>${c.zh ? `<div class="zh">${esc(c.zh)}</div>` : ""}</div>` : ""}
+      ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}
+      <div class="row">${canSpeak && c.ex ? `<button class="btn small" data-say="${i}">聽例句</button>` : ""}<button class="btn small" data-ai="${i}">用 Claude 練習造句</button></div>
+      <div data-slot="${i}"></div>
+    </article>`).join("") : `<p class="muted">呢課未有文法卡。你可以喺「設定」加，或者 send 老師筆記俾 Claude。</p>`}`;
+  el.querySelectorAll("#gchips button").forEach((b) => (b.onclick = () => { gramL = +b.dataset.l; renderGrammar(); }));
+  el.querySelectorAll("[data-say]").forEach((b) => (b.onclick = () => speak(items[+b.dataset.say].ex)));
+  el.querySelectorAll("[data-ai]").forEach((b) => (b.onclick = () => openAI(items[+b.dataset.ai], el.querySelector(`[data-slot="${b.dataset.ai}"]`))));
+  document.getElementById("cramG").onclick = () => startCram(gramL, "g");
+}
+
+/* ===== 進度 ===== */
+function streak() {
+  let n = 0, t = today();
+  if (!S.log[t]) t--;
+  while (S.log[t]) { n++; t--; }
+  return n;
+}
+function renderStats() {
+  const el = document.getElementById("v-stats");
+  const scope = CARDS.filter(inScope);
+  const counts = { new: 0, learning: 0, known: 0, due: 0 };
+  scope.forEach((c) => counts[status(c)]++);
+  const t = today();
+  let week = "";
+  for (let d = t - 13; d <= t; d++) { const n = S.log[d] || 0; week += `<i class="${n >= 20 ? "on2" : n ? "on1" : ""} ${d === t ? "today" : ""}" title="${n} 次"></i>`; }
+  let rows = "";
+  for (let L = 1; L <= maxLesson(); L++) {
+    const cs = CARDS.filter((c) => c.L === L && (c.t === "v" || S.settings.gram));
+    if (!cs.length) continue;
+    const k = cs.filter((c) => status(c) === "known").length;
+    const l = cs.filter((c) => ["learning", "due"].includes(status(c))).length;
+    rows += `<div class="lrow"><span>第${L}課</span><div class="stack" title="記得 ${k}／學緊 ${l}／共 ${cs.length}"><i class="k" style="width:${(k / cs.length) * 100}%"></i><i class="l" style="width:${(l / cs.length) * 100}%"></i></div><span class="muted">${k + l}/${cs.length}</span></div>`;
+  }
+  el.innerHTML = `
+    <div class="tiles">
+      <div class="tile"><b>${counts.due}</b><span>今日要溫</span></div>
+      <div class="tile"><b>${S.log[t] || 0}</b><span>今日溫咗</span></div>
+      <div class="tile"><b>${streak()}</b><span>連續日數</span></div>
+      <div class="tile"><b>${counts.known}</b><span>記得（7日以上）</span></div>
+    </div>
+    <h2>最近兩個星期</h2>
+    <div class="week">${week}</div>
+    <h2>每課進度</h2>
+    <div class="legend"><span><i class="dot known"></i>記得</span><span><i class="dot learning"></i>學緊</span><span><i class="dot"></i>未學</span></div>
+    <div class="lessons">${rows}</div>
+    <p class="muted">一星期一堂嘅話，每日溫 10 分鐘最有效：舊卡會喺你就嚟唔記得嘅時候再出現，記得越牢就隔得越耐。</p>`;
+}
+
+/* ===== 設定 ===== */
+let user = null;
+function renderSetup() {
+  const el = document.getElementById("v-setup");
+  const st = S.settings;
+  let opts = ""; for (let L = 1; L <= maxLesson(); L++) opts += `<option value="${L}" ${L === st.cur ? "selected" : ""}>第${L}課</option>`;
+  el.innerHTML = `
+    <form class="form" id="setForm">
+      <h2>學習設定</h2>
+      <div class="two">
+        <label for="sCur">而家上到<select id="sCur">${opts}</select></label>
+        <label for="sNew">每日新卡數量<input type="number" id="sNew" min="0" max="100" value="${st.newPerDay}"></label>
+      </div>
+      <label for="sDir">生字卡方向
+        <select id="sDir"><option value="jz" ${st.dir === "jz" ? "selected" : ""}>睇日文 → 諗意思</option><option value="zj" ${st.dir === "zj" ? "selected" : ""}>睇中文 → 諗日文（較難）</option></select>
+      </label>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="sGram" ${st.gram ? "checked" : ""}> 每日溫習包括文法卡</label>
+      <p class="muted">每次上完堂，記得將「而家上到」改成新嗰課，新課嘅卡就會開始出現。</p>
+    </form>
+    <form class="form" id="addForm">
+      <h2>加卡（老師筆記）</h2>
+      <div class="two">
+        <label for="aType">類型<select id="aType"><option value="v">生字</option><option value="g">文法</option></select></label>
+        <label for="aL">第幾課<input type="number" id="aL" min="1" max="50" value="${st.cur}"></label>
+      </div>
+      <div class="two">
+        <label for="aJp"><span id="aJpLbl">日文（漢字）</span><input type="text" id="aJp" placeholder="例：曲がります"></label>
+        <label for="aKana"><span id="aKanaLbl">讀音（假名）</span><input type="text" id="aKana" placeholder="例：まがります"></label>
+      </div>
+      <label for="aMean">意思<input type="text" id="aMean" placeholder="例：轉（彎）"></label>
+      <label for="aNote">例句／補充（可以唔填）<textarea id="aNote" placeholder="例：信号を右へ曲がってください。"></textarea></label>
+      <div class="row"><button class="btn primary" type="submit">加入</button><span class="muted" id="addState"></span></div>
+    </form>
+    <div class="form">
+      <h2>重設</h2>
+      <p class="muted">清除所有溫習紀錄，由頭開始。老師筆記唔會刪除。</p>
+      <div class="row" id="resetRow"><button class="btn danger" id="reset">清除進度</button></div>
+      <p class="muted" id="syncNote"></p>
+    </div>`;
+  const upd = () => {
+    st.cur = +document.getElementById("sCur").value;
+    st.newPerDay = Math.max(0, Math.min(100, +document.getElementById("sNew").value || 0));
+    st.dir = document.getElementById("sDir").value;
+    st.gram = document.getElementById("sGram").checked;
+    session = null; save(); updateMeta();
+  };
+  el.querySelectorAll("#setForm select, #setForm input").forEach((i) => (i.onchange = upd));
+  document.getElementById("setForm").onsubmit = (e) => e.preventDefault();
+  const aType = document.getElementById("aType");
+  aType.onchange = () => {
+    const g = aType.value === "g";
+    document.getElementById("aJpLbl").textContent = g ? "句型" : "日文（漢字）";
+    document.getElementById("aKanaLbl").textContent = g ? "例句（日文）" : "讀音（假名）";
+  };
+  document.getElementById("addForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const stEl = document.getElementById("addState");
+    const g = aType.value === "g";
+    const L = +document.getElementById("aL").value || st.cur;
+    const jp = document.getElementById("aJp").value.trim(), kana = document.getElementById("aKana").value.trim();
+    const mean = document.getElementById("aMean").value.trim(), note = document.getElementById("aNote").value.trim();
+    if (!(jp || kana) || !mean) { stEl.textContent = "要填日文同意思"; return; }
+    const doc = g ? { t: "g", L, p: jp || kana, ex: g ? kana : "", mean, note, src: "page" }
+                  : { t: "v", L, kanji: kana ? jp : "", kana: kana || jp, mean, note, src: "page" };
+    if (!db) { stEl.textContent = "要喺 claude.ai 打開先可以儲存老師筆記"; return; }
+    try { await db.collection("cards").add(doc); stEl.textContent = "已加入第" + L + "課"; e.target.reset(); document.getElementById("aL").value = st.cur; }
+    catch (err) { stEl.textContent = err && err.code === "invalid_argument" ? "你冇權限加卡" : "加唔到，等陣再試"; }
+  };
+  document.getElementById("reset").onclick = () => {
+    const row = document.getElementById("resetRow");
+    row.innerHTML = `<span>真係清除晒？</span><button class="btn danger" id="resetYes">確定清除</button><button class="btn" id="resetNo">取消</button>`;
+    document.getElementById("resetNo").onclick = renderSetup;
+    document.getElementById("resetYes").onclick = () => { const keep = S.settings; S = freshState(); S.settings = keep; session = null; save(); toast("已清除進度"); renderSetup(); };
+  };
+  document.getElementById("syncNote").textContent = stateRef ? "進度已同步到你嘅 Claude 帳戶，手機同電腦都睇到。" : "進度暫時只存喺呢個瀏覽器。";
+}
+
+/* ===== 導航 ===== */
+let current = "today";
+const RENDER = { today: renderToday, vocab: renderVocab, grammar: renderGrammar, stats: renderStats, setup: renderSetup };
+function go(v) {
+  current = v;
+  document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.v === v));
+  for (const k of Object.keys(RENDER)) document.getElementById("v-" + k).hidden = k !== v;
+  RENDER[v]();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("#tabs button").forEach((b) => (b.onclick = () => go(b.dataset.v)));
+function updateMeta() {
+  const due = CARDS.filter((c) => inScope(c) && S.c[c.id] && S.c[c.id].d <= today()).length;
+  document.getElementById("meta").textContent = `第1–${S.settings.cur}課 · ${due} 張到期`;
+}
+let toastT;
+function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2400); }
+
+vocabL = gramL = S.settings.cur;
+const start = /^(today|vocab|grammar|stats|setup)$/.test(location.hash.slice(1)) ? location.hash.slice(1) : "today";
+go(start);
+
+/* ===== 雲端同步（db + user） ===== */
+(async () => {
+  if (!window.claude || !window.claude.use) return;
+  const [d, u] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+  user = u;
+  if (!d) return;
+  db = d;
+  d.collection("cards").onSnapshot((snap) => {
+    custom = snap.docs.map((doc) => {
+      const x = doc.data() || {};
+      return { id: "c:" + doc.id, t: x.t === "g" ? "g" : "v", L: +x.L || 1, kana: x.kana || "", kanji: x.kanji || "", p: x.p || "", mean: x.mean || "", ex: x.ex || "", zh: x.zh || "", note: x.note || "", src: x.src || "teacher" };
+    }).filter((c) => (c.t === "v" ? c.kana || c.kanji : c.p) && c.mean);
+    rebuildCards();
+    if (current !== "today" || !session || session.i >= session.q.length) { if (current === "today") session = null; RENDER[current](); }
+    updateMeta();
+  }, () => {});
+  const uid = u ? await u.id() : null;
+  if (!uid) return;
+  stateRef = d.doc("data/users/" + uid + "/state");
+  try {
+    const snap = await stateRef.get();
+    const remote = snap.exists ? normalize(JSON.parse(JSON.stringify(snap.data()))) : null;
+    if (remote && remote.upd > (S.upd || 0)) {
+      S = remote;
+      try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {}
+      session = null; RENDER[current]();
+    } else if (S.upd > 0) {
+      saveRemote();
+    }
+  } catch (e) {}
+  if (current === "setup") renderSetup();
+})();
+</script>
