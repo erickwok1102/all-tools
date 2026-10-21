@@ -93,9 +93,9 @@ section[hidden] { display: none; }
 .face .big.zh { font-family: var(--font-ui); font-size: 2rem; font-weight: 700; }
 .face .big.pattern { font-size: 2rem; }
 .answer { border-top: 1px dashed var(--rule); padding-top: 14px; display: grid; gap: 8px; text-align: left; background: var(--sheet); }
-.answer .mean { font-size: var(--step-1); font-weight: 500; }
-.answer .jp { font-family: var(--font-jp); font-size: var(--step-1); }
-.answer .zh { color: var(--ink-soft); }
+.answer .mean { font-size: var(--step-1); font-weight: 500; white-space: pre-line; }
+.answer .jp { font-family: var(--font-jp); font-size: var(--step-1); white-space: pre-line; }
+.answer .zh { color: var(--ink-soft); white-space: pre-line; }
 .answer .note { font-size: var(--step--1); color: var(--ink-soft); white-space: pre-line; }
 .hint { text-align: center; color: var(--ink-soft); font-size: var(--step--1); background: var(--sheet); justify-self: center; padding: 0 6px; }
 .grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -152,10 +152,10 @@ textarea { resize: vertical; min-height: 64px; }
 
 .gram { border: 1px solid var(--rule); background: var(--sheet); border-radius: 6px; padding: 14px 16px; display: grid; gap: 8px; }
 .gram h3 { margin: 0; font-family: var(--font-jp); font-size: var(--step-1); font-weight: 600; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-.gram .mean { font-weight: 500; }
+.gram .mean { font-weight: 500; white-space: pre-line; }
 .gram .ex { border-left: 2px solid var(--ai-wash); padding-left: 10px; }
-.gram .ex .jp { font-family: var(--font-jp); font-size: var(--step-1); }
-.gram .ex .zh { color: var(--ink-soft); font-size: var(--step--1); }
+.gram .ex .jp { font-family: var(--font-jp); font-size: var(--step-1); white-space: pre-line; }
+.gram .ex .zh { color: var(--ink-soft); font-size: var(--step--1); white-space: pre-line; }
 .gram .note { font-size: var(--step--1); color: var(--ink-soft); white-space: pre-line; }
 
 /* Stats */
@@ -1115,6 +1115,8 @@ function status(c) {
   return st.i >= 7 ? "known" : "learning";
 }
 const inScope = (c) => c.L <= S.settings.cur && (c.t === "v" || S.settings.gram);
+// 新卡次序：老師筆記先，之後由第1課開始
+const newOrder = (a, b) => (a.src ? 0 : 1) - (b.src ? 0 : 1) || a.L - b.L;
 
 /* ===== 今日溫習 ===== */
 let session = null;
@@ -1124,7 +1126,7 @@ function buildSession() {
   const scope = CARDS.filter(inScope);
   const due = scope.filter((c) => S.c[c.id] && S.c[c.id].d <= t).sort((a, b) => S.c[a.id].d - S.c[b.id].d);
   const left = Math.max(0, S.settings.newPerDay - S.nt.n);
-  const fresh = scope.filter((c) => !S.c[c.id]).sort((a, b) => a.L - b.L).slice(0, left);
+  const fresh = scope.filter((c) => !S.c[c.id]).sort(newOrder).slice(0, left);
   // 新卡穿插喺舊卡之間
   const q = []; let ni = 0;
   due.forEach((c, i) => { q.push(c.id); if (i % 3 === 2 && ni < fresh.length) q.push(fresh[ni++].id); });
@@ -1138,7 +1140,7 @@ function startCram(L, type) {
   go("today");
 }
 function extraNew(n) {
-  const fresh = CARDS.filter((c) => inScope(c) && !S.c[c.id]).sort((a, b) => a.L - b.L).slice(0, n);
+  const fresh = CARDS.filter((c) => inScope(c) && !S.c[c.id]).sort(newOrder).slice(0, n);
   session = { q: fresh.map((c) => c.id), i: 0, shown: false, cram: false, done: 0, total: fresh.length, title: "加多 " + fresh.length + " 張新卡" };
   renderToday();
 }
