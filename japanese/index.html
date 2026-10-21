@@ -149,6 +149,26 @@ section[hidden] { display: none; }
   background-size: 40px 40px;
 }
 
+/* Memory & analysis */
+.memos { display: grid; gap: 6px; margin-top: 4px; }
+.memo { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 12px; border-radius: 6px; background: var(--ai-wash); }
+.memo-k { font-family: var(--font-jp); font-size: 1.9rem; font-weight: 600; line-height: 1; }
+.memo-e { font-size: 1.7rem; line-height: 1; }
+.memo-t { display: grid; font-size: var(--step-0); line-height: 1.4; }
+.memo-t b { font-size: var(--step--1); color: var(--ink-soft); font-weight: 500; }
+details.note summary, details.recent summary { cursor: pointer; color: var(--ai); }
+.weaks { display: grid; }
+.weak { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.weak .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.weak .tip { font-size: var(--step--1); color: var(--ink-soft); }
+.meter { height: 8px; background: var(--rule); border-radius: 4px; overflow: hidden; }
+.meter i { display: block; height: 100%; }
+.spark { width: 100%; height: 56px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; }
+.big-btn { width: 100%; padding: 16px; font-size: var(--step-1); }
+.mode-weak { border-color: var(--ai); }
+body.big { --step--1: 0.9375rem; --step-0: 1.0625rem; --step-1: 1.3rem; --step-2: 1.7rem; --step-4: 3.4rem; }
+body.big .opt { font-size: 1.6rem; }
+
 /* Lists */
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chips button {
@@ -1165,14 +1185,15 @@ const maxLesson = () => Math.max(16, ...CARDS.map((c) => c.L || 0));
 const LS_KEY = "minna-fukushu-v1";
 const today = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
 function freshState() {
-  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true }, c: {}, log: {}, nt: { d: 0, n: 0 }, upd: 0 };
+  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true, big: false, auto: true }, c: {}, log: {}, nt: { d: 0, n: 0 }, stats: { cat: {}, wrong: [], read: [] }, upd: 0 };
 }
 function normalize(s) {
   const f = freshState();
   s = s && typeof s === "object" ? s : {};
   return {
     settings: Object.assign(f.settings, s.settings || {}),
-    c: s.c || {}, log: s.log || {}, nt: s.nt || f.nt, upd: s.upd || 0
+    c: s.c || {}, log: s.log || {}, nt: s.nt || f.nt, upd: s.upd || 0,
+    stats: Object.assign(f.stats, s.stats || {})
   };
 }
 let S = freshState();
@@ -1267,14 +1288,14 @@ function cardFace(c, shown) {
     const ruby = c.kanji ? c.kana : "";
     if (zhFirst) {
       front = `<div class="face"><div class="ruby"></div><div class="big zh">${esc(c.mean)}</div></div>`;
-      back = `<div class="answer"><div class="jp" style="font-size:1.6rem">${esc(c.kanji || c.kana)}</div>${c.kanji ? `<div class="zh">${esc(c.kana)}</div>` : ""}${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}</div>`;
+      back = `<div class="answer"><div class="jp" style="font-size:1.6rem">${esc(c.kanji || c.kana)}</div>${c.kanji ? `<div class="zh">${esc(c.kana)}</div>` : ""}${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}${c.kanji ? memoHtml(c.kanji) : ""}</div>`;
     } else {
       front = `<div class="face"><div class="ruby">${shown ? esc(ruby) : ""}</div><div class="big">${esc(c.kanji || c.kana)}</div></div>`;
-      back = `<div class="answer"><div class="mean">${esc(c.mean)}</div>${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}</div>`;
+      back = `<div class="answer"><div class="mean">${esc(c.mean)}</div>${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}${c.kanji ? memoHtml(c.kanji) : ""}</div>`;
     }
   } else {
     front = `<div class="face"><div class="ruby">呢個文法點用？</div><div class="big pattern">${esc(c.p)}</div></div>`;
-    back = `<div class="answer"><div class="mean">${esc(c.mean)}</div>${c.ex ? `<div class="jp">${esc(c.ex)}</div>` : ""}${c.zh ? `<div class="zh">${esc(c.zh)}</div>` : ""}${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}</div>`;
+    back = `<div class="answer"><div class="mean">${esc(c.mean)}</div>${c.ex ? `<div class="jp">${esc(c.ex)}</div>` : ""}${c.zh ? `<div class="zh">${esc(c.zh)}</div>` : ""}${c.note ? `<details class="note"><summary>補充</summary>${esc(c.note)}</details>` : ""}</div>`;
   }
   return `<div class="card" id="card" role="button" tabindex="0" aria-label="${shown ? "答案" : "撳一下睇答案"}">
     <div class="tag">${tags.join("")}</div>
@@ -1330,7 +1351,7 @@ function renderToday() {
     </div>
     <div id="aiSlot"></div>`;
   const card = document.getElementById("card");
-  const flip = () => { if (!s.shown) { s.shown = true; renderToday(); if (c.t === "v" && S.settings.dir === "zj") speak(c.kana); } };
+  const flip = () => { if (!s.shown) { s.shown = true; renderToday(); if (S.settings.auto || (c.t === "v" && S.settings.dir === "zj")) speak(c.t === "v" ? c.kana : (c.ex || c.p).split("\n")[0]); } };
   card.onclick = flip;
   card.onkeydown = (e) => { if (e.key === "Enter") flip(); };
   el.querySelectorAll(".grades button").forEach((b) => (b.onclick = () => answer(c, +b.dataset.g)));
@@ -1348,6 +1369,8 @@ function answer(c, g) {
     if (g === 0) s.q.splice(Math.min(s.q.length, s.i + 4), 0, c.id);
   }
   S.log[today()] = (S.log[today()] || 0) + 1;
+  rec(["srs:" + c.t, "L" + c.L], g >= 2);
+  if (g === 0) logWrong("srs", jpOf(c), c.mean);
   s.done++; s.i++; s.shown = false;
   save(); renderToday();
 }
@@ -1399,14 +1422,17 @@ function openAI(c, slot) {
 
 /* ===== 練習 ===== */
 const MODES = [
-  { id: "read", name: "漢字讀音", desc: "睇漢字，揀啱嘅讀音" },
-  { id: "pick", name: "揀漢字", desc: "睇讀音同意思，揀啱嘅漢字" },
-  { id: "write", name: "手寫漢字", desc: "睇讀音同意思，用手指寫出嚟" },
-  { id: "verb", name: "動詞變化", desc: "ます形 → て形／ない形／辞書形" },
-  { id: "joshi", name: "助詞填空", desc: "例句挖走助詞，揀返啱嗰個" }
+  { id: "weak", name: "弱點練習", desc: "自動多出你弱嘅題目" },
+  { id: "read", name: "漢字讀音", desc: "睇漢字，揀讀音" },
+  { id: "pick", name: "揀漢字", desc: "睇讀音，揀漢字" },
+  { id: "write", name: "手寫漢字", desc: "用手指寫出漢字" },
+  { id: "verb", name: "動詞變化", desc: "て形／ない形／辞書形" },
+  { id: "joshi", name: "助詞填空", desc: "揀返啱嘅助詞" },
+  { id: "aloud", name: "讀句子", desc: "練讀字速度" }
 ];
+const modeName = (id) => (MODES.find((m) => m.id === id) || {}).name || "";
 const FORM_NAME = { te: "て形", nai: "ない形", dict: "辞書形" };
-let P = { mode: "read", range: 0, typing: false, run: null };
+let P = { mode: "weak", range: 0, typing: false, run: null };
 const clean = (s) => String(s || "").replace(/\[.*?\]|［.*?］/g, "").replace(/（.*?）|\(.*?\)/g, "").replace(/[ 　]/g, "");
 const hasKanji = (s) => /[一-鿿]/.test(s);
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -1513,69 +1539,255 @@ function particleItems() {
 
 const markWeak = (card) => { if (card && !card.id.startsWith("x")) { S.c[card.id] = schedule(S.c[card.id], 0); save(); } };
 const verbForms = () => ["te", "nai", "dict"].filter((f) => S.settings.cur >= { te: 14, nai: 17, dict: 18 }[f]);
-function poolSize(mode) {
-  if (["read", "pick", "write"].includes(mode)) return kanjiPool().length;
-  if (mode === "verb") return verbForms().length ? CARDS.filter((c) => inRange(c) && verbInfo(c)).length : 0;
-  return particleItems().length;
+/* ===== 弱點紀錄 ===== */
+// cat：每類題目 [答啱, 總數]；wrong：最近答錯；read：讀句子速度（每秒字數）
+function rec(keys, ok) {
+  const c = S.stats.cat;
+  keys.forEach((k) => { const v = c[k] || (c[k] = [0, 0]); v[1]++; if (ok) v[0]++; });
 }
-function startRun() {
-  let qs = [];
-  if (["read", "pick", "write"].includes(P.mode)) {
+function logWrong(m, a, b) {
+  S.stats.wrong.unshift({ d: today(), m, a, b });
+  if (S.stats.wrong.length > 60) S.stats.wrong.length = 60;
+}
+const acc = (k) => { const v = S.stats.cat[k]; return v ? (v[0] + 1) / (v[1] + 2) : 0.6; };
+const weakW = (k) => 1 + 3 * (1 - acc(k));
+const cardW = (c, extra) => 1 + (S.c[c.id] ? (S.c[c.id].l || 0) * 1.5 : 0) + (extra ? 3 : 0);
+function weightedPick(items, n, w) {
+  const pool = items.map((it) => ({ it, w: Math.max(0.05, w(it)) }));
+  const out = [];
+  while (out.length < n && pool.length) {
+    let r = Math.random() * pool.reduce((s, x) => s + x.w, 0), i = 0;
+    for (; i < pool.length - 1; i++) { r -= pool[i].w; if (r <= 0) break; }
+    out.push(pool.splice(i, 1)[0].it);
+  }
+  return out;
+}
+const catKeys = (q) => {
+  const k = ["m:" + q.mode, "L" + q.card.L];
+  if (q.mode === "verb") k.push("vf:" + q.form, "vg:" + q.v.g);
+  if (q.mode === "joshi") k.push("p:" + q.ans);
+  return k;
+};
+const CAT_NAME = {
+  "m:read": "漢字讀音", "m:pick": "揀漢字", "m:write": "手寫漢字", "m:verb": "動詞變化", "m:joshi": "助詞填空", "m:aloud": "讀句子",
+  "srs:v": "生字溫習", "srs:g": "文法溫習", "vf:te": "て形", "vf:nai": "ない形", "vf:dict": "辞書形",
+  "vg:1": "I 類動詞", "vg:2": "II 類動詞", "vg:3": "III 類動詞"
+};
+const catName = (k) => CAT_NAME[k] || (k.startsWith("p:") ? `助詞「${k.slice(2)}」` : /^L\d+$/.test(k) ? `第${k.slice(1)}課` : null);
+const CAT_TIP = {
+  "vg:1": "記口訣：いちり一起嚟→って，みびに唔俾你→んで。行きます→行って。",
+  "vg:2": "II 類例外最易錯：見ます、起きます、浴びます、借ります、降ります、います、できます，全部 ます→て／ない／る。",
+  "vg:3": "します→して／しない／する；来ます→きて／こない／くる，留意讀音。",
+  "vf:te": "て形：先分 I／II／III 類，再用口訣。",
+  "vf:nai": "ない形：I 類 い段→あ段，い 變 わ（買わない、払わない）。",
+  "vf:dict": "辞書形：I 類 い段→う段；II 類 ます→る。",
+  "p:に": "に＝時間、到着點（入ります、乗ります）、殘留點（置きます）、對象（会います）。",
+  "p:で": "で＝動作發生嘅地方、工具、交通工具。",
+  "p:を": "を＝物件；離開地方（出ます、降ります）同經過地方（散歩します）都用 を。",
+  "p:は": "は＝主題、強調、對比。",
+  "p:が": "が＝主語；好き／上手／欲しい／あります 嘅對象。",
+  "p:へ": "へ＝方向（行きます、来ます、帰ります）。",
+  "m:read": "多數錯喺濁音、長音、促音。讀嘅時候一個個音讀出聲。",
+  "m:pick": "樣似嘅漢字易撈亂，睇圖像記憶拆部件。",
+  "m:write": "寫唔出就拆部件，跟住圖像故事寫。",
+  "m:aloud": "每日讀 10 句，讀出聲，唔識嘅字即刻查。",
+  "srs:v": "記唔到嘅生字，睇圖像記憶，再做「揀漢字」。",
+  "srs:g": "文法唔熟就用「用 Claude 練習造句」自己寫一句。"
+};
+function weakList() {
+  return Object.entries(S.stats.cat)
+    .filter(([k, v]) => v[1] >= 4 && catName(k))
+    .map(([k, v]) => ({ k, ok: v[0], n: v[1], a: v[0] / v[1] }))
+    .filter((x) => x.a < 0.85)
+    .sort((a, b) => a.a - b.a)
+    .slice(0, 5);
+}
+function practiceFor(k) {
+  if (k.startsWith("m:")) return { mode: k.slice(2) === "write" ? "write" : k.slice(2), range: 0 };
+  if (k.startsWith("vf:") || k.startsWith("vg:")) return { mode: "verb", range: 0 };
+  if (k.startsWith("p:") || k === "srs:g") return { mode: "joshi", range: 0 };
+  if (/^L\d+$/.test(k)) return { mode: "weak", range: +k.slice(1) };
+  return { mode: "read", range: 0 };
+}
+
+/* ===== 圖像記憶 ===== */
+// 字：[畫面, 部件, 故事]
+const MEMO = {
+  "人": ["🧍", "象形", "一個人企喺度，兩隻腳"], "口": ["👄", "象形", "四四方方張開嘅口"], "目": ["👁️", "象形", "打直咗嘅眼，兩劃係眼珠"],
+  "耳": ["👂", "象形", "耳仔個樣"], "手": ["✋", "象形", "五隻手指嘅手掌"], "足": ["🦶", "口＋止", "膝頭（口）下面係腳"],
+  "山": ["⛰️", "象形", "三座山峰"], "川": ["🏞️", "象形", "三條水流"], "木": ["🌳", "象形", "上面樹枝，下面樹根"],
+  "林": ["🌳🌳", "木＋木", "兩棵樹＝樹林"], "日": ["☀️", "象形", "太陽，中間一劃係光"], "月": ["🌙", "象形", "彎彎嘅月亮"],
+  "火": ["🔥", "象形", "火焰向上跳"], "水": ["💧", "象形", "中間水流，兩邊水花"], "田": ["🌾", "象形", "一格格嘅田"],
+  "雨": ["🌧️", "象形", "天空落雨點"], "雪": ["❄️", "雨＋ヨ", "落雨變冰，用手（ヨ）掃"], "電": ["⚡", "雨＋电", "落雨行雷，有電"],
+  "休": ["🧍🌳", "亻＋木", "人挨住棵樹休息"], "明": ["☀️🌙", "日＋月", "太陽加月亮＝好光"], "男": ["🌾💪", "田＋力", "喺田度出力嘅人＝男人"],
+  "好": ["👩👶", "女＋子", "媽媽抱住BB＝好"], "安": ["🏠👩", "宀＋女", "屋企有女人睇住＝安心"], "字": ["🏠👶", "宀＋子", "細路喺屋企學寫字"],
+  "本": ["🌳📕", "木＋一", "樹根加一劃＝根本、書"], "上": ["⬆️", "指事", "一劃上面有嘢＝上"], "下": ["⬇️", "指事", "一劃下面有嘢＝下"],
+  "中": ["🎯", "指事", "一條線穿過正中間"], "大": ["🙆", "象形", "人張開手腳＝大"], "小": ["🤏", "象形", "中間一劃，兩邊細細點"],
+  "天": ["🌌", "一＋大", "人頭頂上面嗰劃＝天"], "入": ["➡️", "象形", "箭頭插入去"], "女": ["🙇‍♀️", "象形", "跪低嘅女人"],
+  "子": ["👶", "象形", "張開雙手嘅BB"], "心": ["❤️", "象形", "心臟"], "立": ["🧍", "象形", "人企喺地面上"],
+  "生": ["🌱", "象形", "地上生出嚟嘅草"], "学": ["🎓👶", "⺍＋冖＋子", "細路戴住帽讀書"], "校": ["🌳🏫", "木＋交", "木起嘅學校"],
+  "車": ["🚗", "象形", "由上面望落嚟：車身同車轆"], "駅": ["🐎🚉", "馬＋尺", "以前馬停低嘅地方＝車站"], "馬": ["🐎", "象形", "馬頭、鬃毛、四隻腳"],
+  "魚": ["🐟", "象形", "頭、身，下面四點係尾"], "鳥": ["🐦", "象形", "有眼有尾嘅雀"], "犬": ["🐕", "大＋丶", "「大」加一點＝狗"],
+  "猫": ["🐱", "犭＋苗", "動物（犭）喺草苗度玩"], "話": ["🗣️👅", "言＋舌", "用言語同舌頭＝講話"], "語": ["🗣️", "言＋吾", "我（吾）講嘅言語"],
+  "読": ["🗣️📖", "言＋売", "大聲講出嚟＝讀"], "聞": ["🚪👂", "門＋耳", "喺門口用耳仔聽"], "間": ["🚪☀️", "門＋日", "門縫見到太陽＝中間"],
+  "開": ["🚪🙌", "門＋开", "雙手打開門"], "閉": ["🚪🔒", "門＋才", "門閂住咗"], "見": ["👁️🦵", "目＋儿", "一隻大眼生咗腳行去睇"],
+  "行": ["🚦", "象形", "十字路口＝行"], "食": ["🍚", "人＋良", "屋頂下面有好嘢食"], "飲": ["🍶", "飠＋欠", "張大口（欠）飲嘢"],
+  "買": ["🛒🐚", "罒＋貝", "用網撈貝殼（古時嘅錢）＝買"], "貸": ["💰", "代＋貝", "代你出錢＝借出"], "借": ["🙏", "亻＋昔", "人借咗好耐（昔）都未還"],
+  "花": ["🌸", "艹＋化", "草變化成花"], "茶": ["🍵", "艹＋人＋木", "茶葉（艹）下面有人同木"], "薬": ["🌿💊", "艹＋楽", "令人快樂嘅草＝藥"],
+  "楽": ["🎶😊", "白＋木", "木架上掛住鼓＝音樂、快樂"], "新": ["🪓🌳", "立＋木＋斤", "用斧頭（斤）斬新木"], "古": ["👴", "十＋口", "十張口傳落嚟＝古老"],
+  "高": ["🗼", "象形", "一座高塔"], "長": ["🧓", "象形", "長頭髮嘅老人"], "短": ["🏹🫘", "矢＋豆", "箭（矢）同豆都好短"],
+  "近": ["🚶", "辶＋斤", "行幾步就到＝近"], "遠": ["🚶‍♂️🛣️", "辶＋袁", "行好長條路＝遠"], "早": ["🌅", "日＋十", "太陽啱啱升過地平線"],
+  "晩": ["🌆", "日＋免", "太陽走咗＝夜晚"], "時": ["⏰", "日＋寺", "寺廟睇太陽報時"], "分": ["🔪", "八＋刀", "用刀分開兩邊"],
+  "住": ["🏠🧍", "亻＋主", "人做主嘅地方＝住"], "働": ["💪", "亻＋動", "人郁動＝做嘢"], "動": ["🏋️", "重＋力", "用力推重嘢＝郁"],
+  "作": ["🔨", "亻＋乍", "人動手做嘢"], "知": ["🏹👄", "矢＋口", "講得好似箭咁快＝知道"], "思": ["🧠❤️", "田＋心", "個腦（田）同個心一齊諗"],
+  "忘": ["💔", "亡＋心", "心入面唔見咗＝忘記"], "病": ["🛏️🤒", "疒＋丙", "瞓喺床上＝病"], "体": ["🧍", "亻＋本", "人嘅根本＝身體"],
+  "曇": ["☁️☀️", "日＋雲", "太陽俾雲遮住＝陰天"], "秋": ["🍂🔥", "禾＋火", "禾稻黃、紅葉好似火"], "海": ["🌊", "氵＋毎", "每一滴水都流去海"],
+  "泳": ["🏊", "氵＋永", "永遠喺水入面＝游水"], "洗": ["🧼", "氵＋先", "食飯前先用水洗"], "酒": ["🍶", "氵＋酉", "酒罈（酉）入面嘅水"],
+  "浴": ["🛁", "氵＋谷", "山谷入面嘅水＝沖涼"], "暑": ["🥵", "日＋者", "太陽曬住人＝熱"], "暗": ["🌑", "日＋音", "冇太陽，淨係得聲＝暗"],
+  "店": ["🏪", "广＋占", "屋簷下佔個位＝舖頭"], "国": ["🗺️💎", "囗＋玉", "國界圍住寶玉"], "家": ["🏠🐷", "宀＋豕", "屋入面養住豬＝屋企"],
+  "座": ["🪑", "广＋坐", "屋簷下兩個人坐喺地"], "引": ["🏹", "弓＋丨", "拉弓"], "金": ["💰", "象形", "泥土入面一粒粒金"],
+  "米": ["🍚", "象形", "米粒四散"], "肉": ["🍖", "象形", "一塊有紋嘅肉"], "妹": ["👧", "女＋未", "未大嘅女仔＝妹妹"],
+  "姉": ["👩", "女＋市", "去街市嘅大女＝家姐"], "右": ["🍚✋", "𠂇＋口", "拎飯食（口）嗰隻手＝右"], "左": ["🔧✋", "𠂇＋工", "拎工具（工）嗰隻手＝左"],
+  "円": ["💴", "象形", "圓形嘅錢"], "先": ["🦶➡️", "⺧＋儿", "腳行喺前面＝先"], "音": ["🎵", "立＋日", "企喺太陽下唱歌＝聲音"],
+  "歌": ["🎤", "哥＋欠", "哥哥張大口（欠）唱歌"], "映": ["🎞️", "日＋央", "光照喺中央＝映"], "頭": ["🗣️", "豆＋頁", "頁＝人個頭"],
+  "押": ["👆", "扌＋甲", "用手（扌）撳＝押"], "持": ["🤲", "扌＋寺", "用手（扌）拎住＝持"], "待": ["⏳", "彳＋寺", "喺路口（彳）等＝待"],
+  "送": ["📦🚶", "辶＋关", "行出去送嘢"], "迎": ["🤗", "辶＋卬", "行過去接人"], "返": ["↩️", "辶＋反", "反方向行返去＝還"],
+  "起": ["🏃", "走＋己", "自己（己）走起身"], "歯": ["🦷", "止＋米", "口入面一粒粒（米）牙"]
+};
+let customMemo = {};
+const memoOf = (ch) => customMemo[ch] || MEMO[ch];
+function memoHtml(word) {
+  const chars = [...new Set([...clean(word)].filter((ch) => hasKanji(ch)))];
+  if (!chars.length) return "";
+  const tiles = chars.map((ch) => {
+    const m = memoOf(ch);
+    return m ? `<div class="memo"><span class="memo-k">${esc(ch)}</span><span class="memo-e" aria-hidden="true">${esc(m[0])}</span><span class="memo-t"><b>${esc(m[1])}</b>${esc(m[2])}</span></div>` : "";
+  }).join("");
+  const missing = chars.filter((ch) => !memoOf(ch)).slice(0, 3);
+  return `<div class="memos">${tiles}${missing.length ? `<button class="btn small memo-gen" data-chars="${esc(missing.join(""))}">幫「${esc(missing.join("、"))}」諗圖像記憶</button><span class="muted memo-st"></span>` : ""}</div>`;
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest(".memo-gen");
+  if (!b) return;
+  e.stopPropagation();
+  const st = b.parentElement.querySelector(".memo-st"), chars = [...b.dataset.chars];
+  const sample = await getSample();
+  if (!sample) { st.textContent = "要喺 claude.ai 打開先用到"; return; }
+  b.disabled = true; st.textContent = "Claude 諗緊…";
+  try {
+    const res = await sample.json(`你係日文老師，用「圖像記憶法」幫一個講廣東話嘅學生記漢字。佢睇字慢，所以要好短。\n漢字：${chars.join("、")}\n每個漢字俾：emoji（1–3 個，砌成一個畫面）、parts（拆部件，例如「亻＋木」；象形字寫「象形」）、story（廣東話，15 字以內，用部件砌一個同字義有關嘅畫面）。部件一定要正確，唔肯定就寫「象形」。\n只回覆 JSON：{"items":[{"ch":"休","emoji":"🧍🌳","parts":"亻＋木","story":"人挨住棵樹休息"}]}`, { modelTier: "default" });
+    const items = ((res && res.items) || []).filter((it) => it && it.ch && it.story && chars.includes(it.ch));
+    items.forEach((it) => {
+      customMemo[it.ch] = [String(it.emoji || ""), String(it.parts || ""), String(it.story)];
+      if (db) db.doc("memo/k" + it.ch.codePointAt(0)).set({ ch: it.ch, emoji: String(it.emoji || ""), parts: String(it.parts || ""), story: String(it.story) }).catch(() => {});
+    });
+    if (!items.length) throw { code: "empty" };
+    RENDER[current]();
+  } catch (err) {
+    b.disabled = false;
+    st.textContent = { not_granted: "你未允許呢頁用 Claude", rate_limited: "太密喇，等一陣再試" }[err && err.code] || "諗唔到，再撳一次試吓";
+  }
+});
+
+/* ===== 練習題 ===== */
+function sentenceItems() {
+  const out = [];
+  CARDS.forEach((c) => {
+    if (c.t !== "g" || !inRange(c) || !c.ex) return;
+    const zhs = (c.zh || "").split("\n");
+    c.ex.split("\n").forEach((line, li) => {
+      const s = line.replace(/^[^：\s]{1,6}：/, "").trim();
+      const n = s.replace(/[\s、。…？！]/g, "").length;
+      if (/[→｜＝✗✓（(]/.test(s) || !/[ぁ-ん]/.test(s) || n < 6 || n > 45) return;
+      out.push({ card: c, s, zh: zhs[li] || "" });
+    });
+  });
+  return out;
+}
+function buildQs(mode, n) {
+  const ws = new Set(S.stats.wrong.map((w) => w.a));
+  if (["read", "pick", "write"].includes(mode)) {
     const pool = kanjiPool();
-    qs = pickN(pool, 10).map((it) => {
-      if (P.mode === "read") {
+    return weightedPick(pool, n, (it) => cardW(it.card, ws.has(it.k)) * weakW("L" + it.card.L)).map((it) => {
+      if (mode === "read") {
         const near = pool.filter((x) => x.r !== it.r && Math.abs(x.r.length - it.r.length) <= 1).map((x) => x.r);
-        const src = near.length >= 3 ? near : pool.filter((x) => x.r !== it.r).map((x) => x.r);
+        const src = [...new Set(near.length >= 3 ? near : pool.filter((x) => x.r !== it.r).map((x) => x.r))];
         const v = variant(it.r);
-        const ds = v ? [v, ...pickN([...new Set(src)].filter((x) => x !== v), 2)] : pickN([...new Set(src)], 3);
-        return { ...it, ans: it.r, opts: shuffle([it.r, ...ds]) };
+        const ds = v ? [v, ...pickN(src.filter((x) => x !== v), 2)] : pickN(src, 3);
+        return { ...it, mode, ans: it.r, opts: shuffle([it.r, ...ds]) };
       }
-      if (P.mode === "pick") {
+      if (mode === "pick") {
         const chars = new Set(it.k.replace(/[^一-鿿]/g, ""));
         const share = pool.filter((x) => x.k !== it.k && [...x.k].some((ch) => chars.has(ch))).map((x) => x.k);
         const ds = pickN(share, 2);
         const rest = pool.map((x) => x.k).filter((x) => x !== it.k && !ds.includes(x));
-        return { ...it, ans: it.k, opts: shuffle([it.k, ...ds, ...pickN(rest, 3 - ds.length)]) };
+        return { ...it, mode, ans: it.k, opts: shuffle([it.k, ...ds, ...pickN(rest, 3 - ds.length)]) };
       }
-      return { ...it };
+      return { ...it, mode };
     });
-  } else if (P.mode === "verb") {
-    const vs = [], forms = verbForms();
+  }
+  if (mode === "verb") {
+    const forms = verbForms();
+    if (!forms.length) return [];
+    const vs = [];
     CARDS.forEach((c) => { if (!inRange(c)) return; const v = verbInfo(c); if (v && !vs.some((x) => x.ks === v.ks)) vs.push(v); });
-    qs = pickN(vs, 10).map((v) => {
-      const form = forms[Math.floor(Math.random() * forms.length)];
+    return weightedPick(vs, n, (v) => weakW("vg:" + v.g) * cardW(v.card)).map((v) => {
+      const form = weightedPick(forms, 1, (f) => weakW("vf:" + f))[0];
       const [ar, ak] = conj(v.rs, v.ks, v.g, form);
       if (v.g === 3 && v.ks.endsWith("来")) {
         // 来ます 考讀音
         const p = v.rs.slice(0, -1), bad = { te: ["きって", "くて", "こて"], nai: ["きない", "くない", "こらない"], dict: ["きる", "こる", "くるる"] }[form];
-        return { v, card: v.card, form, ar, ak, ans: ar, opts: shuffle([ar, ...bad.map((x) => p + x)]) };
+        return { mode, v, card: v.card, form, ar, ak, ans: ar, opts: shuffle([ar, ...bad.map((x) => p + x)]) };
       }
       const wrong = [...new Set(wrongForms(v, form))].filter((x) => x && x.length >= 2 && x !== ak);
-      return { v, card: v.card, form, ar, ak, ans: ak, opts: shuffle([ak, ...pickN(wrong, 3)]) };
-    });
-  } else {
-    qs = pickN(particleItems(), 10).map((it) => {
-      const twin = { に: "へ", へ: "に" }[it.ans];
-      return { ...it, opts: shuffle([it.ans, ...pickN(PCHOICE.filter((x) => x !== it.ans && x !== twin), 3)]) };
+      return { mode, v, card: v.card, form, ar, ak, ans: ak, opts: shuffle([ak, ...pickN(wrong, 3)]) };
     });
   }
+  if (mode === "joshi") {
+    return weightedPick(particleItems(), n, (it) => weakW("p:" + it.ans) * cardW(it.card)).map((it) => {
+      const twin = { に: "へ", へ: "に" }[it.ans];
+      return { ...it, mode, opts: shuffle([it.ans, ...pickN(PCHOICE.filter((x) => x !== it.ans && x !== twin), 3)]) };
+    });
+  }
+  if (mode === "aloud") return weightedPick(sentenceItems(), n, (it) => cardW(it.card)).map((it) => ({ ...it, mode }));
+  return [];
+}
+function startRun() {
+  let qs = [];
+  if (P.mode === "weak") {
+    // 按答啱率分配題目：越弱出得越多
+    const ms = ["read", "pick", "verb", "joshi"].filter((m) => poolSize(m) > 0);
+    const alloc = {};
+    for (let i = 0; i < 10 && ms.length; i++) { const m = weightedPick(ms, 1, (x) => weakW("m:" + x) ** 2)[0]; alloc[m] = (alloc[m] || 0) + 1; }
+    Object.keys(alloc).forEach((m) => (qs = qs.concat(buildQs(m, alloc[m]))));
+    qs = shuffle(qs);
+  } else qs = buildQs(P.mode, 10);
   P.run = { qs, i: 0, score: 0, wrong: [], picked: null };
+}
+function poolSize(mode) {
+  if (["read", "pick", "write"].includes(mode)) return kanjiPool().length;
+  if (mode === "verb") return verbForms().length ? CARDS.filter((c) => inRange(c) && verbInfo(c)).length : 0;
+  if (mode === "joshi") return particleItems().length;
+  if (mode === "aloud") return sentenceItems().length;
+  return ["read", "verb", "joshi"].reduce((s, m) => s + poolSize(m), 0);
 }
 
 function feedbackHtml(q) {
-  if (["read", "pick", "write"].includes(P.mode))
-    return `<div class="jp" style="font-size:1.6rem">${esc(q.k)}</div><div>${esc(q.r)} · ${esc(q.card.mean)}</div>${q.card.note ? `<div class="note">${esc(q.card.note)}</div>` : ""}`;
-  if (P.mode === "verb")
-    return `<div class="jp" style="font-size:1.4rem">${esc(q.ak)}</div><div>${esc(q.ar)} · ${["", "I", "II", "III"][q.v.g]} 類動詞 · ${esc(q.card.mean)}</div>`;
-  const full = q.toks.join(" ");
-  return `<div class="jp">${esc(full)}</div>${q.zh ? `<div class="zh">${esc(q.zh)}</div>` : ""}<div class="muted">第${q.card.L}課 · ${esc(q.card.p)}</div>`;
+  if (["read", "pick", "write"].includes(q.mode))
+    return `<div class="jp" style="font-size:1.6rem">${esc(q.k)}</div><div>${esc(q.r)} · ${esc(q.card.mean)}</div>${memoHtml(q.k)}`;
+  if (q.mode === "verb")
+    return `<div class="jp" style="font-size:1.4rem">${esc(q.ak)}</div><div>${esc(q.ar)} · ${["", "I", "II", "III"][q.v.g]} 類動詞 · ${esc(q.card.mean)}</div>${CAT_TIP["vg:" + q.v.g] ? `<div class="note">${esc(CAT_TIP["vg:" + q.v.g])}</div>` : ""}`;
+  if (q.mode === "aloud") return `${q.zh ? `<div class="mean">${esc(q.zh)}</div>` : ""}<div class="muted">第${q.card.L}課 · ${esc(q.card.p)}</div>`;
+  return `<div class="jp">${esc(q.toks.join(" "))}</div>${q.zh ? `<div class="zh">${esc(q.zh)}</div>` : ""}<div class="muted">第${q.card.L}課 · ${esc(q.card.p)}</div>`;
 }
 function questionHtml(q) {
-  if (P.mode === "read") return `<div class="ruby">呢個點讀？</div><div class="big">${esc(q.k)}</div>`;
-  if (P.mode === "pick" || P.mode === "write") return `<div class="ruby">${esc(q.r)}</div><div class="big zh">${esc(q.card.mean)}</div>`;
-  if (P.mode === "verb") return `<div class="ruby">變做 <b>${FORM_NAME[q.form]}</b></div><div class="big">${esc(q.v.ks)}ます</div><div class="muted">${esc(q.v.rs)}ます</div>`;
+  if (q.mode === "read") return `<div class="ruby">呢個點讀？</div><div class="big">${esc(q.k)}</div>`;
+  if (q.mode === "pick" || q.mode === "write") return `<div class="ruby">${esc(q.r)}</div><div class="big zh">${esc(q.card.mean)}</div>`;
+  if (q.mode === "verb") return `<div class="ruby">變做 <b>${FORM_NAME[q.form]}</b></div><div class="big">${esc(q.v.ks)}ます</div><div class="muted">${esc(q.v.rs)}ます</div>`;
+  if (q.mode === "aloud") return `<div class="ruby">讀出聲，讀完撳「讀完」</div><div class="big pattern" style="font-size:1.5rem;line-height:1.9">${esc(q.s)}</div>`;
   return `<div class="ruby">揀啱嘅助詞</div><div class="big pattern" style="font-size:1.35rem;line-height:1.8">${q.toks.map((t, j) => esc(j === q.i ? q.pre : t) + (j === q.i ? `<span class="blank">（　）</span>` : "")).join(" ")}</div>`;
 }
+const sayOf = (q) => (q.mode === "verb" ? q.ar : q.mode === "joshi" ? q.toks.join("") : q.mode === "aloud" ? q.s : q.r);
 function renderPractice() {
   const el = document.getElementById("v-practice");
   const R = P.run;
@@ -1583,13 +1795,14 @@ function renderPractice() {
     let opts = `<option value="0">第1–${S.settings.cur}課（學過嘅全部）</option>`;
     for (let L = 1; L <= maxLesson(); L++) opts += `<option value="${L}" ${P.range === L ? "selected" : ""}>淨係第${L}課</option>`;
     const n = poolSize(P.mode);
+    const weak = weakList();
     el.innerHTML = `
-      <div class="modes">${MODES.map((m) => `<button class="mode" data-m="${m.id}" aria-pressed="${P.mode === m.id}"><b>${m.name}</b><span>${m.desc}</span></button>`).join("")}</div>
+      <div class="modes">${MODES.map((m) => `<button class="mode ${m.id === "weak" ? "mode-weak" : ""}" data-m="${m.id}" aria-pressed="${P.mode === m.id}"><b>${m.name}</b><span>${m.desc}</span></button>`).join("")}</div>
       <div class="form">
         <label for="pRange">範圍<select id="pRange">${opts}</select></label>
         ${P.mode === "verb" ? `<label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="pType" ${P.typing ? "checked" : ""}> 自己打字作答（要有日文輸入法）</label>` : ""}
-        <p class="muted">${P.mode === "verb" && !verbForms().length ? "動詞變化由第14課（て形）開始。" : `呢個範圍有 ${n} 題可以出，每次 10 題。答錯嘅會自動加入今日溫習。`}</p>
-        <div class="row"><button class="btn primary" id="pGo" ${n ? "" : "disabled"}>開始練習</button></div>
+        <p class="muted">${P.mode === "verb" && !verbForms().length ? "動詞變化由第14課（て形）開始。" : P.mode === "weak" ? (weak.length ? `會多出：${weak.slice(0, 3).map((w) => catName(w.k)).join("、")}` : "做多幾次練習，我就知你邊度弱。") : `每次 10 題，答錯會放入今日溫習。`}</p>
+        <div class="row"><button class="btn primary" id="pGo" ${n ? "" : "disabled"}>開始</button></div>
       </div>`;
     el.querySelectorAll(".mode").forEach((b) => (b.onclick = () => { P.mode = b.dataset.m; renderPractice(); }));
     document.getElementById("pRange").onchange = (e) => { P.range = +e.target.value; renderPractice(); };
@@ -1598,21 +1811,27 @@ function renderPractice() {
     return;
   }
   if (R.i >= R.qs.length) {
+    const aloud = P.mode === "aloud" && R.cps && R.cps.length;
     el.innerHTML = `<div class="done">
       <div class="stamp">${R.score === R.qs.length ? "満点" : R.score + "/" + R.qs.length}</div>
-      <h2>${MODES.find((m) => m.id === P.mode).name}：答啱 ${R.score} 題（共 ${R.qs.length} 題）</h2>
-      ${R.wrong.length ? `<p class="muted">答錯嘅已經放入今日溫習：</p><ul class="list" style="text-align:left;width:100%">${R.wrong.map((w) => `<li><i class="dot due"></i><div class="w">${esc(w.a)}</div><div class="m">${esc(w.b)}</div><span></span></li>`).join("")}</ul>` : `<p class="muted">全部答啱！</p>`}
-      <div class="row" style="justify-content:center"><button class="btn primary" id="pAgain">再嚟 10 題</button><button class="btn" id="pBack">揀第二種練習</button></div></div>`;
+      <h2>${modeName(P.mode)}：${P.mode === "aloud" ? "識讀" : "答啱"} ${R.score} 題（共 ${R.qs.length} 題）</h2>
+      ${aloud ? `<p>平均每秒讀 <b>${(R.cps.reduce((a, b) => a + b, 0) / R.cps.length).toFixed(1)}</b> 個字</p>` : ""}
+      ${R.wrong.length ? `<p class="muted">呢啲已經放入今日溫習：</p><ul class="list" style="text-align:left;width:100%">${R.wrong.map((w) => `<li><i class="dot due"></i><div class="w">${esc(w.a)}</div><div class="m">${esc(w.b)}</div><span></span></li>`).join("")}</ul>` : `<p class="muted">全部啱！</p>`}
+      <div class="row" style="justify-content:center"><button class="btn primary" id="pAgain">再嚟 10 題</button><button class="btn" id="pStats">睇弱點分析</button><button class="btn ghost" id="pBack">揀第二種</button></div></div>`;
     document.getElementById("pAgain").onclick = () => { startRun(); renderPractice(); };
+    document.getElementById("pStats").onclick = () => { P.run = null; go("stats"); };
     document.getElementById("pBack").onclick = () => { P.run = null; renderPractice(); };
     return;
   }
-  const q = R.qs[R.i], done = R.picked !== null;
-  const right = done && (R.picked === q.ans || (P.mode === "verb" && R.picked === q.ar));
+  const q = R.qs[R.i], M = q.mode, done = R.picked !== null;
+  const right = done && (R.picked === q.ans || (M === "verb" && R.picked === q.ar));
+  if (M === "aloud" && !q.t0) q.t0 = Date.now();
   let body = "";
-  if (P.mode === "write") {
+  if (M === "write") {
     body = done ? `<div class="answer">${feedbackHtml(q)}</div>` : `<canvas id="pad" class="pad" aria-label="寫字板"></canvas><div class="row"><button class="btn small" id="padClear">清除</button><button class="btn primary small" id="padShow">睇答案</button></div>`;
-  } else if (P.mode === "verb" && P.typing && !done) {
+  } else if (M === "aloud") {
+    body = done ? `<div class="answer">${feedbackHtml(q)}<div class="muted">用咗 ${q.secs.toFixed(1)} 秒，每秒 ${q.cps.toFixed(1)} 個字</div></div>` : `<button class="btn primary big-btn" id="aDone">讀完</button>`;
+  } else if (M === "verb" && P.typing && !done) {
     body = `<form id="pForm" class="row"><input type="text" id="pIn" lang="ja" autocomplete="off" placeholder="例：いって" style="flex:1;min-width:0"><button class="btn primary" type="submit">對答案</button></form>`;
   } else {
     body = `<div class="opts">${q.opts.map((o, j) => {
@@ -1620,29 +1839,34 @@ function renderPractice() {
       return `<button class="opt ${cls}" data-o="${j}" ${done ? "disabled" : ""}>${esc(o)}</button>`;
     }).join("")}</div>`;
   }
+  const selfGrade = done && (M === "write" || M === "aloud");
   el.innerHTML = `
-    <div class="progress"><span>${MODES.find((m) => m.id === P.mode).name}</span><div class="bar"><i style="width:${(R.i / R.qs.length) * 100}%"></i></div><span>${R.i + 1}/${R.qs.length}</span></div>
+    <div class="progress"><span>${P.mode === "weak" ? "弱點 · " : ""}${modeName(M)}</span><div class="bar"><i style="width:${(R.i / R.qs.length) * 100}%"></i></div><span>${R.i + 1}/${R.qs.length}</span></div>
     <div class="card practice"><div class="face">${questionHtml(q)}</div></div>
     ${body}
-    ${done && P.mode !== "write" ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "啱！" : P.typing && P.mode === "verb" ? `你寫：${esc(R.picked)}` : "唔啱"}</b>${feedbackHtml(q)}</div>` : ""}
-    ${done && P.mode === "write" ? `<div class="grades two"><button class="g0" id="wNg">寫錯／唔記得</button><button class="g3" id="wOk">寫啱</button></div>` : ""}
+    ${done && !selfGrade ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "啱！" : P.typing && M === "verb" ? `你寫：${esc(R.picked)}` : "唔啱"}</b>${feedbackHtml(q)}</div>` : ""}
+    ${selfGrade ? `<div class="grades two"><button class="g0" id="sNg">${M === "write" ? "寫錯／唔記得" : "有字唔識讀"}</button><button class="g3" id="sOk">${M === "write" ? "寫啱" : "全部識讀"}</button></div>` : ""}
     <div class="row">
-      ${done && P.mode !== "write" ? `<button class="btn primary" id="pNext">${R.i + 1 < R.qs.length ? "下一題" : "睇結果"}</button>` : ""}
-      ${done && P.mode === "joshi" && !right ? `<button class="btn" id="pWhy">問 Claude 點解</button>` : ""}
-      ${done && canSpeak ? `<button class="btn small" id="pSay">聽發音</button>` : ""}
+      ${done && !selfGrade ? `<button class="btn primary" id="pNext">${R.i + 1 < R.qs.length ? "下一題" : "睇結果"}</button>` : ""}
+      ${done && M === "joshi" && !right ? `<button class="btn" id="pWhy">問 Claude 點解</button>` : ""}
+      ${canSpeak && (done || M === "aloud") ? `<button class="btn small" id="pSay">聽發音</button>` : ""}
       <button class="btn ghost small" id="pQuit">停止</button>
     </div>
     <div id="pAi"></div>`;
+  const wrongEntry = () => (M === "joshi" ? { a: q.pre + q.ans, b: q.card.p } : M === "verb" ? { a: q.ak, b: FORM_NAME[q.form] + " ← " + q.v.ks + "ます" } : M === "aloud" ? { a: q.s, b: q.zh } : { a: q.k, b: q.r + " · " + q.card.mean });
+  const settle = (ok) => {
+    rec(catKeys(q), ok);
+    if (ok) R.score++;
+    else { markWeak(q.card); const w = wrongEntry(); R.wrong.push(w); logWrong(M, w.a, w.b); }
+    save();
+  };
   const finish = (pick) => {
     R.picked = pick;
-    const ok = pick === q.ans || (P.mode === "verb" && pick === q.ar);
-    if (ok) R.score++;
-    else {
-      markWeak(q.card);
-      R.wrong.push(P.mode === "joshi" ? { a: q.pre + q.ans, b: q.card.p } : P.mode === "verb" ? { a: q.ak, b: FORM_NAME[q.form] + " ← " + q.v.ks + "ます" } : { a: q.k, b: q.r + " · " + q.card.mean });
-    }
+    settle(pick === q.ans || (M === "verb" && pick === q.ar));
     renderPractice();
+    if (S.settings.auto) speak(sayOf(q));
   };
+  const next = () => { R.i++; R.picked = null; renderPractice(); };
   el.querySelectorAll(".opt").forEach((b) => (b.onclick = () => finish(q.opts[+b.dataset.o])));
   const f = document.getElementById("pForm");
   if (f) { const inp = document.getElementById("pIn"); inp.focus(); f.onsubmit = (e) => { e.preventDefault(); const v = inp.value.replace(/[ 　]/g, ""); if (v) finish(v === q.ar || v === q.ak ? q.ans : v); }; }
@@ -1650,19 +1874,29 @@ function renderPractice() {
   if (pad) {
     const clear = setupPad(pad);
     document.getElementById("padClear").onclick = clear;
-    document.getElementById("padShow").onclick = () => { R.picked = ""; renderPractice(); };
+    document.getElementById("padShow").onclick = () => { R.picked = ""; renderPractice(); if (S.settings.auto) speak(q.r); };
   }
-  const wOk = document.getElementById("wOk"), wNg = document.getElementById("wNg");
-  if (wOk) wOk.onclick = () => { R.score++; R.i++; R.picked = null; renderPractice(); };
-  if (wNg) wNg.onclick = () => { markWeak(q.card); R.wrong.push({ a: q.k, b: q.r + " · " + q.card.mean }); R.i++; R.picked = null; renderPractice(); };
-  const nx = document.getElementById("pNext"); if (nx) { nx.onclick = () => { R.i++; R.picked = null; renderPractice(); }; nx.focus(); }
-  const say = document.getElementById("pSay"); if (say) say.onclick = () => speak(P.mode === "verb" ? q.ar : P.mode === "joshi" ? q.toks.join("") : q.r);
+  const aDone = document.getElementById("aDone");
+  if (aDone) aDone.onclick = () => {
+    q.secs = Math.max(0.5, (Date.now() - q.t0) / 1000);
+    q.cps = q.s.replace(/[\s、。…？！]/g, "").length / q.secs;
+    (R.cps || (R.cps = [])).push(q.cps);
+    S.stats.read.push({ d: today(), cps: Math.round(q.cps * 100) / 100 });
+    if (S.stats.read.length > 200) S.stats.read.shift();
+    R.picked = "read"; renderPractice(); speak(q.s);
+  };
+  const sOk = document.getElementById("sOk"), sNg = document.getElementById("sNg");
+  if (sOk) sOk.onclick = () => { settle(true); next(); };
+  if (sNg) sNg.onclick = () => { settle(false); next(); };
+  const nx = document.getElementById("pNext"); if (nx) { nx.onclick = next; nx.focus(); }
+  const say = document.getElementById("pSay"); if (say) say.onclick = () => speak(sayOf(q));
   document.getElementById("pQuit").onclick = () => { P.run = null; renderPractice(); };
   const why = document.getElementById("pWhy");
   if (why) why.onclick = () => askClaude(
-    `你係一位耐心嘅日文老師，學生用廣東話（繁體字），程度係《みんなの日本語》第${S.settings.cur}課。請用廣東話口語，三至五句，唔好用 markdown 標題或粗體。\n句子：${q.toks.join(" ")}\n學生喺「${q.pre}（　）」揀咗「${R.picked}」，正確答案係「${q.ans}」。請解釋點解要用「${q.ans}」、點解「${R.picked}」唔啱，再俾一句用「${q.ans}」嘅簡單例句（日文＋中文）。`,
+    `你係一位耐心嘅日文老師，學生用廣東話（繁體字），程度係《みんなの日本語》第${S.settings.cur}課。學生睇字慢，請用廣東話口語，最多四句短句，唔好用 markdown 標題或粗體。\n句子：${q.toks.join(" ")}\n學生喺「${q.pre}（　）」揀咗「${R.picked}」，正確答案係「${q.ans}」。請解釋點解要用「${q.ans}」、點解「${R.picked}」唔啱，再俾一句用「${q.ans}」嘅簡單例句（日文＋中文）。`,
     document.getElementById("pAi"), why);
 }
+
 function setupPad(cv) {
   const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1;
   const w = cv.clientWidth, h = cv.clientHeight;
@@ -1758,7 +1992,29 @@ function renderStats() {
     const l = cs.filter((c) => ["learning", "due"].includes(status(c))).length;
     rows += `<div class="lrow"><span>第${L}課</span><div class="stack" title="記得 ${k}／學緊 ${l}／共 ${cs.length}"><i class="k" style="width:${(k / cs.length) * 100}%"></i><i class="l" style="width:${(l / cs.length) * 100}%"></i></div><span class="muted">${k + l}/${cs.length}</span></div>`;
   }
-  el.innerHTML = `
+  const weak = weakList();
+  const totalDone = Object.entries(S.stats.cat).filter(([k]) => k.startsWith("m:") || k.startsWith("srs:")).reduce((a, [, v]) => a + v[1], 0);
+  const rd = S.stats.read, avg = (a) => a.reduce((x, y) => x + y.cps, 0) / a.length;
+  let speed = "";
+  if (rd.length) {
+    const pts = rd.slice(-30), max = Math.max(...pts.map((x) => x.cps), 1);
+    const line = pts.map((x, i) => `${pts.length > 1 ? (i / (pts.length - 1)) * 196 + 2 : 100},${46 - (x.cps / max) * 40}`).join(" ");
+    speed = `<h2>讀字速度</h2>
+      <div class="tiles"><div class="tile"><b>${avg(rd.slice(-5)).toFixed(1)}</b><span>最近每秒讀幾多字</span></div>${rd.length >= 10 ? `<div class="tile"><b>${avg(rd.slice(0, 5)).toFixed(1)}</b><span>最初每秒讀幾多字</span></div>` : ""}</div>
+      <svg class="spark" viewBox="0 0 200 50" preserveAspectRatio="none" role="img" aria-label="讀字速度走勢"><polyline points="${line}" fill="none" stroke="var(--ai)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  const analysis = `<h2>你嘅弱點</h2>
+    ${weak.length ? `<div class="weaks">${weak.map((w) => `<div class="weak">
+      <div class="top"><b>${esc(catName(w.k))}</b><span class="muted">答啱 ${w.ok}/${w.n}</span></div>
+      <div class="meter"><i style="width:${Math.round(w.a * 100)}%;background:var(${w.a < 0.5 ? "--shu" : w.a < 0.7 ? "--yamabuki" : "--matcha"})"></i></div>
+      ${CAT_TIP[w.k] ? `<div class="tip">${esc(CAT_TIP[w.k])}</div>` : ""}
+      <div><button class="btn small" data-train="${esc(w.k)}">練呢樣</button></div></div>`).join("")}</div>`
+      : `<p class="muted">${totalDone < 10 ? "做多啲溫習同練習（大約 20 題），我就分析到你邊度弱。" : "暫時冇明顯弱點，繼續保持！"}</p>`}
+    ${S.stats.wrong.length ? `<details class="recent"><summary>最近答錯（${Math.min(S.stats.wrong.length, 10)}）</summary><ul class="list">${S.stats.wrong.slice(0, 10).map((w) => `<li><i class="dot due"></i><div class="w">${esc(w.a)}</div><div class="m">${esc(w.b || "")}</div><span class="muted">${esc(modeName(w.m) || "溫習")}</span></li>`).join("")}</ul></details>` : ""}
+    ${totalDone >= 10 ? `<div class="row"><button class="btn" id="aiAnalyse">叫 Claude 詳細分析</button></div><div id="aiAn"></div>` : ""}`;
+  el.innerHTML = `${analysis}
+    ${speed}
+    <h2>溫習</h2>
     <div class="tiles">
       <div class="tile"><b>${counts.due}</b><span>今日要溫</span></div>
       <div class="tile"><b>${S.log[t] || 0}</b><span>今日溫咗</span></div>
@@ -1770,7 +2026,18 @@ function renderStats() {
     <h2>每課進度</h2>
     <div class="legend"><span><i class="dot known"></i>記得</span><span><i class="dot learning"></i>學緊</span><span><i class="dot"></i>未學</span></div>
     <div class="lessons">${rows}</div>
-    <p class="muted">一星期一堂嘅話，每日溫 10 分鐘最有效：舊卡會喺你就嚟唔記得嘅時候再出現，記得越牢就隔得越耐。</p>`;
+    <p class="muted">一星期一堂嘅話，每日溫 10 分鐘最有效。</p>`;
+  el.querySelectorAll("[data-train]").forEach((b) => (b.onclick = () => {
+    const t = practiceFor(b.dataset.train);
+    P.mode = t.mode; P.range = t.range; startRun(); go("practice");
+  }));
+  const an = document.getElementById("aiAnalyse");
+  if (an) an.onclick = () => {
+    const cats = Object.entries(S.stats.cat).filter(([k]) => catName(k)).map(([k, v]) => `${catName(k)}：${v[0]}/${v[1]}`).join("；");
+    const wr = S.stats.wrong.slice(0, 20).map((w) => `${modeName(w.m) || "溫習"}｜${w.a}｜${w.b || ""}`).join("\n");
+    const sp = rd.length ? `讀字速度：最初每秒 ${avg(rd.slice(0, 5)).toFixed(1)} 字，最近每秒 ${avg(rd.slice(-5)).toFixed(1)} 字。` : "";
+    askClaude(`你係一位日文老師，學生講廣東話，用《みんなの日本語》上到第${S.settings.cur}課，一星期上一堂。佢話自己睇字慢，成日唔記得漢字同文法。\n以下係佢嘅練習數據（答啱/總數）：${cats}\n${sp}\n最近答錯：\n${wr}\n\n請用廣東話口語分析，要好短（佢睇字慢）：\n1. 佢最弱嘅三樣嘢（每樣一句，講出錯誤規律）\n2. 下個星期每日 10 分鐘點樣練（例如邊種練習、幾多題）\n唔好用 markdown 標題或粗體，每點一行。`, document.getElementById("aiAn"), an);
+  };
 }
 
 /* ===== 設定 ===== */
@@ -1790,6 +2057,8 @@ function renderSetup() {
         <select id="sDir"><option value="jz" ${st.dir === "jz" ? "selected" : ""}>睇日文 → 諗意思</option><option value="zj" ${st.dir === "zj" ? "selected" : ""}>睇中文 → 諗日文（較難）</option></select>
       </label>
       <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="sGram" ${st.gram ? "checked" : ""}> 每日溫習包括文法卡</label>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="sBig" ${st.big ? "checked" : ""}> 大字模式（字大啲、易睇啲）</label>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="sAuto" ${st.auto ? "checked" : ""}> 睇答案時自動讀出發音</label>
       <p class="muted">每次上完堂，記得將「而家上到」改成新嗰課，新課嘅卡就會開始出現。</p>
     </form>
     <form class="form" id="addForm">
@@ -1817,6 +2086,8 @@ function renderSetup() {
     st.newPerDay = Math.max(0, Math.min(100, +document.getElementById("sNew").value || 0));
     st.dir = document.getElementById("sDir").value;
     st.gram = document.getElementById("sGram").checked;
+    st.big = document.getElementById("sBig").checked;
+    st.auto = document.getElementById("sAuto").checked;
     session = null; save(); updateMeta();
   };
   el.querySelectorAll("#setForm select, #setForm input").forEach((i) => (i.onchange = upd));
@@ -1864,6 +2135,7 @@ document.querySelectorAll("#tabs button").forEach((b) => (b.onclick = () => go(b
 function updateMeta() {
   const due = CARDS.filter((c) => inScope(c) && S.c[c.id] && S.c[c.id].d <= today()).length;
   document.getElementById("meta").textContent = `第1–${S.settings.cur}課 · ${due} 張到期`;
+  document.body.classList.toggle("big", !!S.settings.big);
 }
 let toastT;
 function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2400); }
@@ -1887,6 +2159,9 @@ go(start);
     rebuildCards();
     if (current !== "today" || !session || session.i >= session.q.length) { if (current === "today") session = null; RENDER[current](); }
     updateMeta();
+  }, () => {});
+  d.collection("memo").onSnapshot((snap) => {
+    snap.docs.forEach((doc) => { const x = doc.data() || {}; if (x.ch && x.story) customMemo[x.ch] = [String(x.emoji || ""), String(x.parts || ""), String(x.story)]; });
   }, () => {});
   const uid = u ? await u.id() : null;
   if (!uid) return;
