@@ -60,7 +60,7 @@ header {
 nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 nav button {
   border: 0; background: none; color: var(--ink-soft); font: inherit; font-weight: 500;
-  padding: 8px 12px 10px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+  padding: 8px 10px 10px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
 }
 nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ai); }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }
@@ -124,6 +124,30 @@ section[hidden] { display: none; }
 .ai-box textarea, .ai-box input { width: 100%; }
 .ai-out { white-space: pre-wrap; font-size: var(--step-0); line-height: 1.7; }
 .ai-out:empty { display: none; }
+
+/* Practice */
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.mode { font: inherit; text-align: left; display: grid; gap: 2px; padding: 12px 14px; border-radius: 6px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); cursor: pointer; }
+.mode span { font-size: var(--step--1); color: var(--ink-soft); }
+.mode[aria-pressed="true"] { border-color: var(--ai); box-shadow: inset 0 0 0 1px var(--ai); }
+.mode[aria-pressed="true"] b { color: var(--ai); }
+.card.practice { min-height: 200px; cursor: auto; align-content: center; }
+.blank { color: var(--ai); font-weight: 700; }
+.opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.opt { font-family: var(--font-jp); font-size: 1.3rem; font-weight: 600; padding: 14px 8px; border-radius: 6px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); cursor: pointer; overflow-wrap: anywhere; }
+.opt:hover:not(:disabled) { border-color: var(--ai); }
+.opt:disabled { cursor: default; opacity: 0.6; }
+.opt.right { border-color: var(--matcha); color: var(--matcha); opacity: 1; box-shadow: inset 0 0 0 1px var(--matcha); }
+.opt.wrong { border-color: var(--shu); color: var(--shu); opacity: 1; text-decoration: line-through; }
+.verdict { border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; border-top-width: 3px; }
+.verdict.ok { border-top-color: var(--matcha); } .verdict.ok > b { color: var(--matcha); }
+.verdict.ng { border-top-color: var(--shu); } .verdict.ng > b { color: var(--shu); }
+.pad {
+  width: 100%; height: 240px; touch-action: none; border: 1px solid var(--rule); border-radius: 6px; cursor: crosshair;
+  background-color: var(--sheet);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
 
 /* Lists */
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -196,6 +220,7 @@ h2 { font-size: var(--step-1); margin: 4px 0 0; text-wrap: balance; }
     </div>
     <nav role="tablist" id="tabs">
       <button role="tab" data-v="today" aria-selected="true">今日溫習</button>
+      <button role="tab" data-v="practice" aria-selected="false">練習</button>
       <button role="tab" data-v="vocab" aria-selected="false">生字</button>
       <button role="tab" data-v="grammar" aria-selected="false">文法</button>
       <button role="tab" data-v="stats" aria-selected="false">進度</button>
@@ -204,6 +229,7 @@ h2 { font-size: var(--step-1); margin: 4px 0 0; text-wrap: balance; }
   </header>
   <main>
     <section class="view" id="v-today"></section>
+    <section class="view" id="v-practice" hidden></section>
     <section class="view" id="v-vocab" hidden></section>
     <section class="view" id="v-grammar" hidden></section>
     <section class="view" id="v-stats" hidden></section>
@@ -1124,7 +1150,13 @@ let custom = []; // 老師筆記（db 嘅 cards collection）
 let CARDS = BUILTIN.slice();
 let BYID = new Map(CARDS.map((c) => [c.id, c]));
 function rebuildCards() {
-  CARDS = BUILTIN.concat(custom);
+  // 老師版生字卡取代同課同讀音嘅課本卡，進度跟埋過去
+  const taught = new Map(custom.filter((c) => c.t === "v").map((c) => [c.L + ":" + c.kana, c]));
+  CARDS = BUILTIN.filter((c) => {
+    const t = c.t === "v" && taught.get(c.L + ":" + c.kana);
+    if (t && S.c[c.id] && !S.c[t.id]) S.c[t.id] = S.c[c.id];
+    return !t;
+  }).concat(custom);
   BYID = new Map(CARDS.map((c) => [c.id, c]));
 }
 const maxLesson = () => Math.max(16, ...CARDS.map((c) => c.L || 0));
@@ -1266,11 +1298,13 @@ function renderToday() {
       <div class="row" style="justify-content:center">
         ${newLeft ? `<button class="btn primary" id="more10">再學 10 張新卡</button>` : ""}
         ${s.cram ? `<button class="btn" id="backToday">返去今日溫習</button>` : ""}
+        <button class="btn" id="toPractice">做練習題</button>
         <button class="btn ghost" id="toVocab">揀一課自由練習</button>
       </div></div>`;
     const m = document.getElementById("more10"); if (m) m.onclick = () => extraNew(10);
     const b = document.getElementById("backToday"); if (b) b.onclick = () => { session = null; renderToday(); };
     document.getElementById("toVocab").onclick = () => go("vocab");
+    document.getElementById("toPractice").onclick = () => go("practice");
     return;
   }
   const c = BYID.get(s.q[s.i]);
@@ -1361,6 +1395,300 @@ function openAI(c, slot) {
     }
     go.disabled = false;
   };
+}
+
+/* ===== 練習 ===== */
+const MODES = [
+  { id: "read", name: "漢字讀音", desc: "睇漢字，揀啱嘅讀音" },
+  { id: "pick", name: "揀漢字", desc: "睇讀音同意思，揀啱嘅漢字" },
+  { id: "write", name: "手寫漢字", desc: "睇讀音同意思，用手指寫出嚟" },
+  { id: "verb", name: "動詞變化", desc: "ます形 → て形／ない形／辞書形" },
+  { id: "joshi", name: "助詞填空", desc: "例句挖走助詞，揀返啱嗰個" }
+];
+const FORM_NAME = { te: "て形", nai: "ない形", dict: "辞書形" };
+let P = { mode: "read", range: 0, typing: false, run: null };
+const clean = (s) => String(s || "").replace(/\[.*?\]|［.*?］/g, "").replace(/（.*?）|\(.*?\)/g, "").replace(/[ 　]/g, "");
+const hasKanji = (s) => /[一-鿿]/.test(s);
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pickN = (a, n) => shuffle(a).slice(0, n);
+const inRange = (c) => (P.range ? c.L === P.range : c.L <= S.settings.cur);
+
+function kanjiPool() {
+  const seen = new Set(), out = [];
+  CARDS.forEach((c) => {
+    if (c.t !== "v" || !inRange(c)) return;
+    const k = clean(c.kanji), r = clean(c.kana);
+    if (!k || !hasKanji(k) || k === r || /[～、。？]/.test(k) || seen.has(k)) return;
+    seen.add(k); out.push({ card: c, k, r });
+  });
+  return out;
+}
+// 近似讀音：濁音、長音、促音
+const DAKU = "かがきぎくぐけげこごさざしじすずせぜそぞただちぢつづてでとどはばひびふぶへべほぼ";
+function variant(r) {
+  const tries = [];
+  [...r].forEach((ch, i) => {
+    const j = DAKU.indexOf(ch);
+    if (j >= 0) tries.push(r.slice(0, i) + DAKU[j % 2 ? j - 1 : j + 1] + r.slice(i + 1));
+  });
+  if (/[ょゅ]う/.test(r)) tries.push(r.replace(/([ょゅ])う/, "$1"));
+  else if (/[ょゅ]/.test(r)) tries.push(r.replace(/([ょゅ])/, "$1う"));
+  if (r.includes("っ")) tries.push(r.replace("っ", ""));
+  const ok = tries.filter((x) => x !== r);
+  return ok.length ? ok[Math.floor(Math.random() * ok.length)] : null;
+}
+
+// 動詞變化
+const DAN = { い: "わいうえお", き: "かきくけこ", ぎ: "がぎぐげご", し: "さしすせそ", ち: "たちつてと", に: "なにぬねの", び: "ばびぶべぼ", み: "まみむめも", り: "らりるれろ" };
+const TE_END = { い: "って", ち: "って", り: "って", み: "んで", び: "んで", に: "んで", き: "いて", ぎ: "いで", し: "して" };
+const E_DAN = "えけげせぜてでねへべめれ";
+const II_KANJI = ["見ます", "起きます", "浴びます", "着ます", "降ります", "借ります", "足ります", "出来ます", "居ます"];
+function verbGroup(rs, ks) {
+  if (ks.endsWith("来") && rs.endsWith("き")) return 3;
+  if (rs.endsWith("し") && ks.endsWith("し")) {
+    const pre = ks.slice(0, -1);
+    if (!pre) return 3;
+    return /[ぁ-ん]$/.test(pre) || /出$/.test(pre) || /^[一-鿿]$/.test(pre) ? 1 : 3;
+  }
+  if (II_KANJI.some((x) => (ks + "ます").endsWith(x)) || (ks === rs && ["い", "でき"].includes(rs))) return 2;
+  return E_DAN.includes(rs.slice(-1)) ? 2 : 1;
+}
+function conj(rs, ks, g, form) {
+  if (g === 3) {
+    const p = rs.slice(0, -1), pk = ks.slice(0, -1);
+    if (ks.endsWith("来")) return { te: [p + "きて", pk + "来て"], nai: [p + "こない", pk + "来ない"], dict: [p + "くる", pk + "来る"] }[form];
+    return { te: [p + "して", pk + "して"], nai: [p + "しない", pk + "しない"], dict: [p + "する", pk + "する"] }[form];
+  }
+  if (g === 2) { const e = { te: "て", nai: "ない", dict: "る" }[form]; return [rs + e, ks + e]; }
+  const last = rs.slice(-1);
+  if (!DAN[last] || ks.slice(-1) !== last) return null;
+  const end = form === "te" ? (last === "き" && ks.endsWith("行き") ? "って" : TE_END[last]) : form === "nai" ? DAN[last][0] + "ない" : DAN[last][2];
+  return [rs.slice(0, -1) + end, ks.slice(0, -1) + end];
+}
+function verbInfo(c) {
+  if (c.t !== "v") return null;
+  const r = clean(c.kana), k = clean(c.kanji) || r;
+  if (!r.endsWith("ます") || !k.endsWith("ます") || r.includes("～") || ["あります", "いらっしゃいます"].includes(r)) return null;
+  // 固定講法唔出題
+  if (/(ねがいします|ございます|ています|ってきます|になります|しつれいします|いただきます)$/.test(r) && !k.includes("来")) return null;
+  const rs = r.slice(0, -2), ks = k.slice(0, -2), g = verbGroup(rs, ks);
+  return conj(rs, ks, g, "te") ? { card: c, rs, ks, g } : null;
+}
+function wrongForms(v, form) {
+  const out = [];
+  [1, 2, 3].forEach((g) => { if (g !== v.g) { const f = conj(v.rs, v.ks, g, form); if (f) out.push(f[1]); } });
+  const b = v.ks.slice(0, -1);
+  if (form === "te") ["って", "んで", "いて", "いで", "して"].forEach((e) => out.push(b + e));
+  if (form === "nai") out.push(v.ks + "ない", b + "あない");
+  if (form === "dict") out.push(v.ks + "る", b + "う");
+  return out;
+}
+
+// 助詞填空
+const PARTS = ["までに", "から", "まで", "を", "に", "で", "へ", "が", "は", "と", "も", "や", "の"];
+const PCHOICE = ["は", "が", "を", "に", "で", "へ", "と", "も", "から", "まで"];
+const HIRA_NOUN = /(ここ|そこ|あそこ|どこ|わたし|あなた|だれ|うち|みんな|これ|それ|あれ|ごはん|おふろ|すし|ともだち|こども|なに|きのう|あした|きょう|いつ|さん|ちゃん)$/;
+function particleItems() {
+  const items = [];
+  CARDS.forEach((c) => {
+    if (c.t !== "g" || !inRange(c) || !c.ex) return;
+    c.ex.split("\n").forEach((line, li) => {
+      line = line.replace(/^[^：\s]{1,6}：/, "");
+      if (/[→｜＝✗✓（(]/.test(line) || !/[ 　]/.test(line)) return;
+      const toks = line.trim().split(/[ 　]+/);
+      toks.forEach((tok, i) => {
+        if (i === toks.length - 1) return;
+        const p = PARTS.find((x) => tok.endsWith(x));
+        if (!p) return;
+        const pre = tok.slice(0, -p.length);
+        if (!pre || /[にでへとか]$/.test(pre)) return;
+        if (!(/[一-鿿ァ-ヶー0-9０-９]$/.test(pre) || HIRA_NOUN.test(pre))) return;
+        const zh = (c.zh || "").split("\n")[li] || "";
+        items.push({ card: c, toks, i, pre, ans: p, zh });
+      });
+    });
+  });
+  return items;
+}
+
+const markWeak = (card) => { if (card && !card.id.startsWith("x")) { S.c[card.id] = schedule(S.c[card.id], 0); save(); } };
+const verbForms = () => ["te", "nai", "dict"].filter((f) => S.settings.cur >= { te: 14, nai: 17, dict: 18 }[f]);
+function poolSize(mode) {
+  if (["read", "pick", "write"].includes(mode)) return kanjiPool().length;
+  if (mode === "verb") return verbForms().length ? CARDS.filter((c) => inRange(c) && verbInfo(c)).length : 0;
+  return particleItems().length;
+}
+function startRun() {
+  let qs = [];
+  if (["read", "pick", "write"].includes(P.mode)) {
+    const pool = kanjiPool();
+    qs = pickN(pool, 10).map((it) => {
+      if (P.mode === "read") {
+        const near = pool.filter((x) => x.r !== it.r && Math.abs(x.r.length - it.r.length) <= 1).map((x) => x.r);
+        const src = near.length >= 3 ? near : pool.filter((x) => x.r !== it.r).map((x) => x.r);
+        const v = variant(it.r);
+        const ds = v ? [v, ...pickN([...new Set(src)].filter((x) => x !== v), 2)] : pickN([...new Set(src)], 3);
+        return { ...it, ans: it.r, opts: shuffle([it.r, ...ds]) };
+      }
+      if (P.mode === "pick") {
+        const chars = new Set(it.k.replace(/[^一-鿿]/g, ""));
+        const share = pool.filter((x) => x.k !== it.k && [...x.k].some((ch) => chars.has(ch))).map((x) => x.k);
+        const ds = pickN(share, 2);
+        const rest = pool.map((x) => x.k).filter((x) => x !== it.k && !ds.includes(x));
+        return { ...it, ans: it.k, opts: shuffle([it.k, ...ds, ...pickN(rest, 3 - ds.length)]) };
+      }
+      return { ...it };
+    });
+  } else if (P.mode === "verb") {
+    const vs = [], forms = verbForms();
+    CARDS.forEach((c) => { if (!inRange(c)) return; const v = verbInfo(c); if (v && !vs.some((x) => x.ks === v.ks)) vs.push(v); });
+    qs = pickN(vs, 10).map((v) => {
+      const form = forms[Math.floor(Math.random() * forms.length)];
+      const [ar, ak] = conj(v.rs, v.ks, v.g, form);
+      if (v.g === 3 && v.ks.endsWith("来")) {
+        // 来ます 考讀音
+        const p = v.rs.slice(0, -1), bad = { te: ["きって", "くて", "こて"], nai: ["きない", "くない", "こらない"], dict: ["きる", "こる", "くるる"] }[form];
+        return { v, card: v.card, form, ar, ak, ans: ar, opts: shuffle([ar, ...bad.map((x) => p + x)]) };
+      }
+      const wrong = [...new Set(wrongForms(v, form))].filter((x) => x && x.length >= 2 && x !== ak);
+      return { v, card: v.card, form, ar, ak, ans: ak, opts: shuffle([ak, ...pickN(wrong, 3)]) };
+    });
+  } else {
+    qs = pickN(particleItems(), 10).map((it) => {
+      const twin = { に: "へ", へ: "に" }[it.ans];
+      return { ...it, opts: shuffle([it.ans, ...pickN(PCHOICE.filter((x) => x !== it.ans && x !== twin), 3)]) };
+    });
+  }
+  P.run = { qs, i: 0, score: 0, wrong: [], picked: null };
+}
+
+function feedbackHtml(q) {
+  if (["read", "pick", "write"].includes(P.mode))
+    return `<div class="jp" style="font-size:1.6rem">${esc(q.k)}</div><div>${esc(q.r)} · ${esc(q.card.mean)}</div>${q.card.note ? `<div class="note">${esc(q.card.note)}</div>` : ""}`;
+  if (P.mode === "verb")
+    return `<div class="jp" style="font-size:1.4rem">${esc(q.ak)}</div><div>${esc(q.ar)} · ${["", "I", "II", "III"][q.v.g]} 類動詞 · ${esc(q.card.mean)}</div>`;
+  const full = q.toks.join(" ");
+  return `<div class="jp">${esc(full)}</div>${q.zh ? `<div class="zh">${esc(q.zh)}</div>` : ""}<div class="muted">第${q.card.L}課 · ${esc(q.card.p)}</div>`;
+}
+function questionHtml(q) {
+  if (P.mode === "read") return `<div class="ruby">呢個點讀？</div><div class="big">${esc(q.k)}</div>`;
+  if (P.mode === "pick" || P.mode === "write") return `<div class="ruby">${esc(q.r)}</div><div class="big zh">${esc(q.card.mean)}</div>`;
+  if (P.mode === "verb") return `<div class="ruby">變做 <b>${FORM_NAME[q.form]}</b></div><div class="big">${esc(q.v.ks)}ます</div><div class="muted">${esc(q.v.rs)}ます</div>`;
+  return `<div class="ruby">揀啱嘅助詞</div><div class="big pattern" style="font-size:1.35rem;line-height:1.8">${q.toks.map((t, j) => esc(j === q.i ? q.pre : t) + (j === q.i ? `<span class="blank">（　）</span>` : "")).join(" ")}</div>`;
+}
+function renderPractice() {
+  const el = document.getElementById("v-practice");
+  const R = P.run;
+  if (!R) {
+    let opts = `<option value="0">第1–${S.settings.cur}課（學過嘅全部）</option>`;
+    for (let L = 1; L <= maxLesson(); L++) opts += `<option value="${L}" ${P.range === L ? "selected" : ""}>淨係第${L}課</option>`;
+    const n = poolSize(P.mode);
+    el.innerHTML = `
+      <div class="modes">${MODES.map((m) => `<button class="mode" data-m="${m.id}" aria-pressed="${P.mode === m.id}"><b>${m.name}</b><span>${m.desc}</span></button>`).join("")}</div>
+      <div class="form">
+        <label for="pRange">範圍<select id="pRange">${opts}</select></label>
+        ${P.mode === "verb" ? `<label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="pType" ${P.typing ? "checked" : ""}> 自己打字作答（要有日文輸入法）</label>` : ""}
+        <p class="muted">${P.mode === "verb" && !verbForms().length ? "動詞變化由第14課（て形）開始。" : `呢個範圍有 ${n} 題可以出，每次 10 題。答錯嘅會自動加入今日溫習。`}</p>
+        <div class="row"><button class="btn primary" id="pGo" ${n ? "" : "disabled"}>開始練習</button></div>
+      </div>`;
+    el.querySelectorAll(".mode").forEach((b) => (b.onclick = () => { P.mode = b.dataset.m; renderPractice(); }));
+    document.getElementById("pRange").onchange = (e) => { P.range = +e.target.value; renderPractice(); };
+    const pt = document.getElementById("pType"); if (pt) pt.onchange = () => { P.typing = pt.checked; };
+    document.getElementById("pGo").onclick = () => { startRun(); renderPractice(); };
+    return;
+  }
+  if (R.i >= R.qs.length) {
+    el.innerHTML = `<div class="done">
+      <div class="stamp">${R.score === R.qs.length ? "満点" : R.score + "/" + R.qs.length}</div>
+      <h2>${MODES.find((m) => m.id === P.mode).name}：答啱 ${R.score} 題（共 ${R.qs.length} 題）</h2>
+      ${R.wrong.length ? `<p class="muted">答錯嘅已經放入今日溫習：</p><ul class="list" style="text-align:left;width:100%">${R.wrong.map((w) => `<li><i class="dot due"></i><div class="w">${esc(w.a)}</div><div class="m">${esc(w.b)}</div><span></span></li>`).join("")}</ul>` : `<p class="muted">全部答啱！</p>`}
+      <div class="row" style="justify-content:center"><button class="btn primary" id="pAgain">再嚟 10 題</button><button class="btn" id="pBack">揀第二種練習</button></div></div>`;
+    document.getElementById("pAgain").onclick = () => { startRun(); renderPractice(); };
+    document.getElementById("pBack").onclick = () => { P.run = null; renderPractice(); };
+    return;
+  }
+  const q = R.qs[R.i], done = R.picked !== null;
+  const right = done && (R.picked === q.ans || (P.mode === "verb" && R.picked === q.ar));
+  let body = "";
+  if (P.mode === "write") {
+    body = done ? `<div class="answer">${feedbackHtml(q)}</div>` : `<canvas id="pad" class="pad" aria-label="寫字板"></canvas><div class="row"><button class="btn small" id="padClear">清除</button><button class="btn primary small" id="padShow">睇答案</button></div>`;
+  } else if (P.mode === "verb" && P.typing && !done) {
+    body = `<form id="pForm" class="row"><input type="text" id="pIn" lang="ja" autocomplete="off" placeholder="例：いって" style="flex:1;min-width:0"><button class="btn primary" type="submit">對答案</button></form>`;
+  } else {
+    body = `<div class="opts">${q.opts.map((o, j) => {
+      const cls = done ? (o === q.ans ? "right" : o === R.picked ? "wrong" : "") : "";
+      return `<button class="opt ${cls}" data-o="${j}" ${done ? "disabled" : ""}>${esc(o)}</button>`;
+    }).join("")}</div>`;
+  }
+  el.innerHTML = `
+    <div class="progress"><span>${MODES.find((m) => m.id === P.mode).name}</span><div class="bar"><i style="width:${(R.i / R.qs.length) * 100}%"></i></div><span>${R.i + 1}/${R.qs.length}</span></div>
+    <div class="card practice"><div class="face">${questionHtml(q)}</div></div>
+    ${body}
+    ${done && P.mode !== "write" ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "啱！" : P.typing && P.mode === "verb" ? `你寫：${esc(R.picked)}` : "唔啱"}</b>${feedbackHtml(q)}</div>` : ""}
+    ${done && P.mode === "write" ? `<div class="grades two"><button class="g0" id="wNg">寫錯／唔記得</button><button class="g3" id="wOk">寫啱</button></div>` : ""}
+    <div class="row">
+      ${done && P.mode !== "write" ? `<button class="btn primary" id="pNext">${R.i + 1 < R.qs.length ? "下一題" : "睇結果"}</button>` : ""}
+      ${done && P.mode === "joshi" && !right ? `<button class="btn" id="pWhy">問 Claude 點解</button>` : ""}
+      ${done && canSpeak ? `<button class="btn small" id="pSay">聽發音</button>` : ""}
+      <button class="btn ghost small" id="pQuit">停止</button>
+    </div>
+    <div id="pAi"></div>`;
+  const finish = (pick) => {
+    R.picked = pick;
+    const ok = pick === q.ans || (P.mode === "verb" && pick === q.ar);
+    if (ok) R.score++;
+    else {
+      markWeak(q.card);
+      R.wrong.push(P.mode === "joshi" ? { a: q.pre + q.ans, b: q.card.p } : P.mode === "verb" ? { a: q.ak, b: FORM_NAME[q.form] + " ← " + q.v.ks + "ます" } : { a: q.k, b: q.r + " · " + q.card.mean });
+    }
+    renderPractice();
+  };
+  el.querySelectorAll(".opt").forEach((b) => (b.onclick = () => finish(q.opts[+b.dataset.o])));
+  const f = document.getElementById("pForm");
+  if (f) { const inp = document.getElementById("pIn"); inp.focus(); f.onsubmit = (e) => { e.preventDefault(); const v = inp.value.replace(/[ 　]/g, ""); if (v) finish(v === q.ar || v === q.ak ? q.ans : v); }; }
+  const pad = document.getElementById("pad");
+  if (pad) {
+    const clear = setupPad(pad);
+    document.getElementById("padClear").onclick = clear;
+    document.getElementById("padShow").onclick = () => { R.picked = ""; renderPractice(); };
+  }
+  const wOk = document.getElementById("wOk"), wNg = document.getElementById("wNg");
+  if (wOk) wOk.onclick = () => { R.score++; R.i++; R.picked = null; renderPractice(); };
+  if (wNg) wNg.onclick = () => { markWeak(q.card); R.wrong.push({ a: q.k, b: q.r + " · " + q.card.mean }); R.i++; R.picked = null; renderPractice(); };
+  const nx = document.getElementById("pNext"); if (nx) { nx.onclick = () => { R.i++; R.picked = null; renderPractice(); }; nx.focus(); }
+  const say = document.getElementById("pSay"); if (say) say.onclick = () => speak(P.mode === "verb" ? q.ar : P.mode === "joshi" ? q.toks.join("") : q.r);
+  document.getElementById("pQuit").onclick = () => { P.run = null; renderPractice(); };
+  const why = document.getElementById("pWhy");
+  if (why) why.onclick = () => askClaude(
+    `你係一位耐心嘅日文老師，學生用廣東話（繁體字），程度係《みんなの日本語》第${S.settings.cur}課。請用廣東話口語，三至五句，唔好用 markdown 標題或粗體。\n句子：${q.toks.join(" ")}\n學生喺「${q.pre}（　）」揀咗「${R.picked}」，正確答案係「${q.ans}」。請解釋點解要用「${q.ans}」、點解「${R.picked}」唔啱，再俾一句用「${q.ans}」嘅簡單例句（日文＋中文）。`,
+    document.getElementById("pAi"), why);
+}
+function setupPad(cv) {
+  const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr; ctx.scale(dpr, dpr);
+  ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = getComputedStyle(document.body).color;
+  let down = false, last = null;
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  cv.onpointerdown = (e) => { down = true; cv.setPointerCapture(e.pointerId); last = pos(e); ctx.beginPath(); ctx.arc(last.x, last.y, 3, 0, 7); ctx.fill(); };
+  cv.onpointermove = (e) => { if (!down) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; };
+  cv.onpointerup = cv.onpointercancel = () => (down = false);
+  ctx.fillStyle = ctx.strokeStyle;
+  return () => ctx.clearRect(0, 0, w, h);
+}
+async function askClaude(prompt, slot, btn) {
+  slot.innerHTML = `<div class="ai-box"><span class="muted" id="aiSt">Claude 諗緊…</span><div class="ai-out" id="aiTx"></div></div>`;
+  const st = slot.querySelector("#aiSt"), out = slot.querySelector("#aiTx");
+  const sample = await getSample();
+  if (!sample) { st.textContent = "呢度用唔到 Claude（要喺 claude.ai 打開）"; return; }
+  if (btn) btn.disabled = true;
+  try {
+    await sample(prompt, { onText: ({ text }) => { out.textContent = text; st.textContent = ""; } });
+    st.textContent = "";
+  } catch (e) {
+    st.textContent = { not_granted: "你未允許呢頁用 Claude", rate_limited: "太密喇，等一陣再試" }[e && e.code] || "Claude 暫時答唔到，等陣再試";
+  }
+  if (btn) btn.disabled = false;
 }
 
 /* ===== 生字 ===== */
@@ -1524,7 +1852,7 @@ function renderSetup() {
 
 /* ===== 導航 ===== */
 let current = "today";
-const RENDER = { today: renderToday, vocab: renderVocab, grammar: renderGrammar, stats: renderStats, setup: renderSetup };
+const RENDER = { today: renderToday, practice: renderPractice, vocab: renderVocab, grammar: renderGrammar, stats: renderStats, setup: renderSetup };
 function go(v) {
   current = v;
   document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.v === v));
@@ -1541,7 +1869,7 @@ let toastT;
 function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2400); }
 
 vocabL = gramL = S.settings.cur;
-const start = /^(today|vocab|grammar|stats|setup)$/.test(location.hash.slice(1)) ? location.hash.slice(1) : "today";
+const start = /^(today|practice|vocab|grammar|stats|setup)$/.test(location.hash.slice(1)) ? location.hash.slice(1) : "today";
 go(start);
 
 /* ===== 雲端同步（db + user） ===== */
