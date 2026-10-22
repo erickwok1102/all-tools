@@ -191,6 +191,10 @@ p {
     color: var(--text-primary);
 }
 
+a.nav-item {
+    text-decoration: none;
+}
+
 .nav-item:hover {
     background-color: var(--bg-tertiary);
     transform: translateX(4px);

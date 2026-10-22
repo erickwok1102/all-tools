@@ -1,0 +1,762 @@
+/* 報價單 / 發票 / 收據 工具 */
+:root {
+    --primary-color: #6366f1;
+    --primary-dark: #4f46e5;
+    --danger-color: #ef4444;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #374151;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+
+    /* 文件配色 (跟 Canva 範本) */
+    --doc-accent: #b8dc94;
+    --doc-text: #3a3a3a;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang HK", "Microsoft JhengHei", sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* 頂部 */
+.dz-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    box-shadow: var(--shadow-md);
+}
+
+.dz-topbar h1 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dz-back {
+    color: #fff;
+    font-size: 1.125rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+}
+
+.dz-back:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.dz-topbar-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* 版面 */
+.dz-layout {
+    display: grid;
+    grid-template-columns: minmax(340px, 440px) 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    align-items: start;
+}
+
+.dz-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dz-preview {
+    position: sticky;
+    top: 4.5rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem;
+    overflow: hidden;
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+}
+
+.dz-preview-box {
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+/* 卡片 / 欄位 */
+.dz-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dz-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dz-card-head h2 {
+    font-size: 1rem;
+}
+
+.dz-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.dz-row-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.dz-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.dz-field > span {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.dz-field input,
+.dz-field textarea,
+.dz-history-filters input,
+.dz-history-filters select {
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font: inherit;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    background: #fff;
+}
+
+.dz-field textarea {
+    resize: vertical;
+}
+
+.dz-field input:focus,
+.dz-field textarea:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -1px;
+    border-color: transparent;
+}
+
+.dz-checks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.dz-checks label {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* 類型切換 */
+.dz-segment {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 0.25rem;
+    gap: 0.25rem;
+}
+
+.dz-segment button {
+    border: none;
+    background: transparent;
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.dz-segment button small {
+    font-weight: 400;
+    font-size: 0.75rem;
+}
+
+.dz-segment button.active {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+/* 項目 */
+.dz-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--bg-secondary);
+}
+
+.dz-item-head {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.dz-item-no {
+    flex: 1;
+    font-weight: 600;
+}
+
+.dz-total-line {
+    text-align: right;
+    font-size: 1rem;
+}
+
+/* 按鈕 */
+.dz-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: #fff;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.dz-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.dz-btn-primary {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+.dz-btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.dz-btn-ghost {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: transparent;
+    color: #fff;
+}
+
+.dz-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.dz-btn-small {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8125rem;
+}
+
+.dz-icon-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.dz-icon-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.dz-icon-btn.dz-danger:hover {
+    color: var(--danger-color);
+}
+
+.dz-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.dz-status {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    min-height: 1.25rem;
+}
+
+/* 對話框 */
+.dz-dialog {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    width: min(640px, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    padding: 0;
+    margin: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.dz-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.dz-dialog-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+.dz-dialog-head h2 {
+    font-size: 1.125rem;
+}
+
+.dz-dialog-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dz-dialog-body h3 {
+    font-size: 0.9375rem;
+    margin-top: 0.5rem;
+}
+
+.dz-dialog-foot {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.dz-hint {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.dz-signature-setting {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.dz-signature-setting img {
+    width: 140px;
+    height: 70px;
+    object-fit: contain;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    background: #fff;
+}
+
+.dz-signature-setting img:not([src]) {
+    visibility: hidden;
+}
+
+.dz-signature-setting div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* 紀錄 */
+.dz-history-filters {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 0.5rem;
+    padding: 1rem 1rem 0;
+}
+
+.dz-history-list {
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.dz-history-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.25rem 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    align-items: center;
+}
+
+.dz-history-row.current {
+    border-color: var(--primary-color);
+}
+
+.dz-history-main {
+    min-width: 0;
+    cursor: pointer;
+}
+
+.dz-history-main strong {
+    display: block;
+}
+
+.dz-history-main span {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dz-history-side {
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.dz-badge {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.dz-badge-quotation { background: #e0e7ff; color: #3730a3; }
+.dz-badge-invoice { background: #fef3c7; color: #92400e; }
+.dz-badge-receipt { background: #d1fae5; color: #065f46; }
+
+.dz-empty {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem 0;
+}
+
+/* ========== 文件本身 (A4) ========== */
+.doc-page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    color: var(--doc-text);
+    font-family: "Open Sans", "Helvetica Neue", Arial, "PingFang HK", "Microsoft JhengHei", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    padding: 14mm 16mm 16mm;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transform-origin: top left;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+}
+
+.doc-company {
+    text-align: right;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+.doc-title {
+    display: flex;
+    align-items: center;
+    gap: 4mm;
+    font-size: 24pt;
+    font-weight: 400;
+    letter-spacing: 0.5pt;
+    margin-top: 2mm;
+    line-height: 1.1;
+}
+
+.doc-mark {
+    width: 9mm;
+    height: 9mm;
+    background: var(--doc-accent);
+    flex-shrink: 0;
+}
+
+.doc-meta {
+    margin-top: 2mm;
+    font-size: 10pt;
+    line-height: 1.5;
+}
+
+.doc-meta div {
+    white-space: pre-wrap;
+}
+
+.doc-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10mm;
+}
+
+.doc-items th {
+    font-size: 14pt;
+    font-weight: 400;
+    text-align: left;
+    padding-bottom: 1.5mm;
+    border-bottom: 1.6mm solid var(--doc-accent);
+}
+
+.doc-items th:last-child,
+.doc-items td:last-child {
+    text-align: right;
+}
+
+.doc-items td {
+    vertical-align: top;
+    padding-top: 3mm;
+}
+
+.doc-items td:last-child {
+    white-space: nowrap;
+    padding-left: 6mm;
+}
+
+.doc-item-title {
+    white-space: pre-wrap;
+}
+
+.doc-item-details {
+    padding-left: 5mm;
+    margin-top: 1mm;
+    white-space: pre-wrap;
+    font-size: 9.5pt;
+}
+
+.doc-item-calc {
+    display: block;
+    font-size: 8.5pt;
+    color: #777;
+}
+
+.doc-spacer {
+    flex: 1;
+    min-height: 8mm;
+}
+
+.doc-payment {
+    font-size: 8.5pt;
+    margin-bottom: 2mm;
+    white-space: pre-wrap;
+}
+
+.doc-payment-note {
+    font-size: 10pt;
+    margin-bottom: 1mm;
+}
+
+.doc-rule {
+    border-top: 0.6mm solid var(--doc-accent);
+}
+
+.doc-total {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 10mm;
+    padding: 3mm 0 0;
+}
+
+.doc-total-amount {
+    min-width: 30mm;
+    text-align: right;
+    font-weight: 600;
+    padding: 0 1mm 1mm;
+    border-bottom: 1.8mm double var(--doc-accent);
+}
+
+.doc-terms {
+    margin-top: 8mm;
+    font-size: 8pt;
+    line-height: 1.5;
+    padding-left: 4mm;
+}
+
+.doc-signs {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 10mm;
+    margin-top: 12mm;
+}
+
+.doc-sign {
+    width: 62mm;
+    text-align: center;
+    font-size: 10pt;
+    position: relative;
+}
+
+.doc-sign-own {
+    margin-left: auto;
+}
+
+.doc-sign-space {
+    height: 20mm;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.doc-sign-space img {
+    max-height: 24mm;
+    max-width: 62mm;
+    object-fit: contain;
+    margin-bottom: -4mm;
+}
+
+.doc-sign-line {
+    border-top: 0.5mm solid var(--doc-accent);
+    padding-top: 1.5mm;
+}
+
+.doc-sign-title {
+    border-top: 0.5mm solid var(--doc-accent);
+    margin-top: 1.5mm;
+    padding-top: 1.5mm;
+}
+
+.doc-client-sign .doc-sign-line + .doc-sign-line {
+    margin-top: 9mm;
+}
+
+.doc-paid {
+    position: absolute;
+    right: 24mm;
+    top: 40mm;
+    transform: rotate(-14deg);
+    border: 1.2mm solid #c0392b;
+    color: #c0392b;
+    font-size: 26pt;
+    font-weight: 800;
+    letter-spacing: 3pt;
+    padding: 1mm 6mm;
+    border-radius: 3mm;
+    opacity: 0.8;
+}
+
+/* 手機 */
+@media (max-width: 900px) {
+    .dz-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .dz-preview {
+        position: static;
+        max-height: none;
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dz-layout {
+        padding: 0.75rem;
+    }
+
+    .dz-topbar-actions span {
+        display: none;
+    }
+
+    .dz-row-3 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dz-checks {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 列印：只印文件 */
+@page {
+    size: A4;
+    margin: 0;
+}
+
+@media print {
+    body {
+        background: #fff;
+    }
+
+    .dz-topbar,
+    .dz-editor,
+    .dz-dialog {
+        display: none !important;
+    }
+
+    .dz-layout {
+        display: block;
+        padding: 0;
+    }
+
+    .dz-preview {
+        position: static;
+        padding: 0;
+        background: none;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .dz-preview-box {
+        width: auto !important;
+        height: auto !important;
+        overflow: visible;
+    }
+
+    .doc-page {
+        transform: none !important;
+        box-shadow: none;
+        height: 297mm;
+        min-height: 0;
+        overflow: hidden;
+    }
+}
