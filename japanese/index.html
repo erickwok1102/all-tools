@@ -67,6 +67,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 main { padding-top: 18px; display: grid; gap: 18px; }
 section[hidden] { display: none; }
 .view { display: grid; gap: 16px; }
+.view > *, .status > *, .daily > * { min-width: 0; }
 
 /* Study card */
 .progress { display: flex; align-items: center; gap: 10px; font-size: var(--step--1); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
@@ -241,6 +242,36 @@ body.big .opt { font-size: 1.6rem; }
 .hearts .lost { color: var(--rule); }
 .hearts .combo { margin-left: auto; }
 
+/* Streak & rewards */
+.daily { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 8px; background: var(--sheet); }
+.ring { --p: 0; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--matcha) calc(var(--p) * 1%), var(--rule) 0); }
+.ring span { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; background: var(--sheet); font-size: 0.9rem; }
+.daily-txt { display: grid; gap: 2px; font-size: var(--step--1); min-width: 0; }
+.daily-txt b { font-size: var(--step-1); }
+.warn { color: var(--shu); }
+.delta { font-size: var(--step--1); font-weight: 700; margin-left: 6px; }
+.delta.up { color: var(--matcha); } .delta.down { color: var(--shu); }
+.celebrate { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(0, 0, 0, .45);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.cele-box { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 22px 26px; border-radius: 10px; background: var(--sheet); border: 2px solid var(--ink); max-width: 340px; animation: pop2 .45s ease-out; }
+.cele-box > b { font-size: 1.5rem; color: var(--ai); }
+.big-fire { font-size: 2.6rem; font-family: "DotGothic16", var(--font-ui); line-height: 1.1; }
+.chest { font-weight: 700; color: var(--yamabuki); }
+@keyframes pop2 { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.ach { display: grid; justify-items: center; text-align: center; gap: 2px; padding: 8px 4px; border: 1px solid var(--rule); border-radius: 6px; background: var(--sheet); }
+.ach span { font-size: 1.6rem; line-height: 1.2; }
+.ach b { font-size: var(--step--1); }
+.ach small { font-size: 0.7rem; color: var(--ink-soft); }
+.ach.locked { opacity: .45; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal i { aspect-ratio: 1; border-radius: 4px; background: var(--rule); display: grid; place-items: center; font-style: normal; font-size: .7rem; max-width: 100%; }
+.cal i.met, .cal-key.met { background: var(--matcha); }
+.cal i.part, .cal-key.part { background: color-mix(in srgb, var(--matcha) 40%, var(--rule)); }
+.cal i.frozen { background: var(--ai-wash); }
+.cal i.today { outline: 2px solid var(--ink); }
+.cal-key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+
 /* Lists */
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chips button {
@@ -295,7 +326,7 @@ textarea { resize: vertical; min-height: 64px; }
 .form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 h2 { font-size: var(--step-1); margin: 4px 0 0; text-wrap: balance; }
 .muted { color: var(--ink-soft); font-size: var(--step--1); }
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 8px 16px; border-radius: 6px; font-size: var(--step--1); z-index: 20; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); width: max-content; text-align: center; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 8px 16px; border-radius: 6px; font-size: var(--step--1); z-index: 20; }
 @media (max-width: 420px) {
   .list li { grid-template-columns: 10px minmax(0, 1fr) auto; }
   .list li .m { grid-column: 2 / 3; grid-row: 2; }
@@ -332,6 +363,7 @@ h2 { font-size: var(--step-1); margin: 4px 0 0; text-wrap: balance; }
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lvup game-font" id="lvup" hidden></div>
+<div class="celebrate" id="celebrate" hidden></div>
 
 <script>
 /* ===== 教材資料：みんなの日本語 初級I 第1–16課（核心生字＋文法） =====
@@ -1260,7 +1292,7 @@ const maxLesson = () => Math.max(16, ...CARDS.map((c) => c.L || 0));
 const LS_KEY = "minna-fukushu-v1";
 const today = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
 function freshState() {
-  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true, big: false, auto: true }, c: {}, log: {}, nt: { d: 0, n: 0 }, stats: { cat: {}, rc: {}, kj: {}, wrong: [], read: [] }, hist: {}, notes: [], game: { xp: 0, boss: {} }, upd: 0 };
+  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true, big: false, auto: true, goal: 15 }, c: {}, log: {}, nt: { d: 0, n: 0 }, stats: { cat: {}, rc: {}, kj: {}, sp: {}, wrong: [], read: [] }, hist: {}, notes: [], game: { xp: 0, boss: {}, freezes: 0, frozen: [], chest: {}, ach: {}, maxCombo: 0, goalDays: 0 }, upd: 0 };
 }
 function normalize(s) {
   const f = freshState();
@@ -1388,7 +1420,7 @@ function renderToday() {
   if (s.i >= s.q.length) {
     const scope = CARDS.filter(inScope);
     const newLeft = scope.filter((c) => !S.c[c.id]).length;
-    el.innerHTML = `<div class="done">
+    el.innerHTML = `${dailyCard()}<div class="done">
       <div class="stamp">済</div>
       <h2>${s.cram ? "練習完" : s.total ? "今日份溫晒喇" : "今日冇卡要溫"}</h2>
       <p class="muted">${s.total ? `頭先溫咗 ${s.done} 次。` : ""}今日總共溫咗 ${S.log[today()] || 0} 次，第1–${S.settings.cur}課仲有 ${newLeft} 張未學嘅卡。</p>
@@ -1417,7 +1449,7 @@ function renderToday() {
       gradeHtml = `<div class="grades">${labels.map((l, g) => `<button class="g${g}" data-g="${g}">${l}<small>${fmtIv(schedule(st, g).i)}</small></button>`).join("")}</div>`;
     }
   }
-  el.innerHTML = `
+  el.innerHTML = `${dailyCard()}
     <div class="progress"><span>${esc(s.title || "今日溫習")}</span><div class="bar"><i style="width:${pct}%"></i></div><span>${Math.max(0, s.q.length - s.i)} 張剩</span></div>
     ${cardFace(c, s.shown)}
     ${gradeHtml}
@@ -1444,10 +1476,12 @@ function answer(c, g) {
     S.c[c.id] = schedule(S.c[c.id], g);
     if (g === 0) s.q.splice(Math.min(s.q.length, s.i + 4), 0, c.id);
   }
-  S.log[today()] = (S.log[today()] || 0) + 1;
+  tick();
   rec(["srs:" + c.t, "L" + c.L], g >= 2);
+  if (g === 0) toast(c.t === "v" ? "▼ 語彙（記返就升返）" : "▼ 文法（記返就升返）");
   addXP(g >= 2 ? 2 : 1);
   if (c.t === "v" && c.kanji) bumpKanji(c.kanji, g >= 2);
+  checkAch();
   if (g === 0) logWrong("srs", jpOf(c), c.mean);
   s.done++; s.i++; s.shown = false;
   save(); renderToday();
@@ -1620,10 +1654,15 @@ function particleItems() {
 const markWeak = (card) => { if (card && !card.id.startsWith("x")) { S.c[card.id] = schedule(S.c[card.id], 0); save(); } };
 const verbForms = () => ["te", "nai", "dict"].filter((f) => S.settings.cur >= { te: 14, nai: 17, dict: 18 }[f]);
 /* ===== 弱點紀錄 ===== */
+const SP_KEYS = ["m:joshi", "m:verb", "m:aloud"];
+// 舊記錄冇 sp：用答啱減答錯補返
+const spOf = (k) => { if (S.stats.sp[k] != null) return S.stats.sp[k]; const v = S.stats.cat[k]; return v ? Math.max(0, v[0] - (v[1] - v[0])) : 0; };
 // cat：每類題目 [答啱, 總數]；wrong：最近答錯；read：讀句子速度（每秒字數）
 function rec(keys, ok) {
   const c = S.stats.cat, rc = S.stats.rc;
   keys.forEach((k) => {
+    // 能力值：答啱 +1，答錯 −1（要喺更新總數之前計）
+    if (SP_KEYS.includes(k)) S.stats.sp[k] = Math.max(0, spOf(k) + (ok ? 1 : -1));
     const v = c[k] || (c[k] = [0, 0]); v[1]++; if (ok) v[0]++;
     rc[k] = ((rc[k] || "") + (ok ? "1" : "0")).slice(-30);
   });
@@ -1951,6 +1990,8 @@ function questionHtml(q) {
   if (q.mode === "aloud") return `<div class="ruby">讀出聲，讀完撳「讀完」</div><div class="big pattern" style="font-size:1.5rem;line-height:1.9">${esc(q.s)}</div>`;
   return `<div class="ruby">揀啱嘅助詞</div><div class="big pattern" style="font-size:1.35rem;line-height:1.8">${q.toks.map((t, j) => esc(j === q.i ? q.pre : t) + (j === q.i ? `<span class="blank">（　）</span>` : "")).join(" ")}</div>`;
 }
+const STAT_OF = { joshi: "助詞", verb: "變化", aloud: "閱讀", read: "漢字", pick: "漢字", write: "漢字", mean: "語彙" };
+const deltaChip = (m, ok) => (STAT_OF[m] ? `<span class="delta ${ok ? "up" : "down"}">${ok ? "▲" : "▼"} ${STAT_OF[m]}</span>` : "");
 const sayOf = (q) => (q.mode === "verb" ? q.ar : q.mode === "joshi" ? q.toks.join("") : q.mode === "aloud" ? q.s : q.r);
 function renderPractice() {
   const el = document.getElementById("v-practice");
@@ -1960,7 +2001,7 @@ function renderPractice() {
     for (let L = 1; L <= maxLesson(); L++) opts += `<option value="${L}" ${P.range === L ? "selected" : ""}>淨係第${L}課</option>`;
     const n = poolSize(P.mode);
     const weak = weakList();
-    el.innerHTML = `
+    el.innerHTML = `${dailyCard()}
       <div class="modes">${MODES.map((m) => `<button class="mode ${m.id === "weak" ? "mode-weak" : ""}" data-m="${m.id}" aria-pressed="${P.mode === m.id}"><b>${m.name}</b><span>${m.desc}</span></button>`).join("")}</div>
       <div class="form">
         ${P.mode === "test" ? "" : `<label for="pRange">範圍<select id="pRange">${opts}</select></label>`}
@@ -2025,7 +2066,7 @@ function renderPractice() {
     <div class="progress"><span>${P.mode === "weak" ? "弱點 · " : ""}${modeName(M)}${R.combo >= 2 ? ` <b class="combo game-font">🔥${R.combo}</b>` : ""}</span><div class="bar"><i style="width:${(R.i / R.qs.length) * 100}%"></i></div><span>${R.i + 1}/${R.qs.length}</span></div>
     <div class="card practice"><div class="face">${questionHtml(q)}</div></div>
     ${body}
-    ${done && !selfGrade ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "啱！" : P.typing && M === "verb" ? `你寫：${esc(R.picked)}` : "唔啱"}</b>${feedbackHtml(q)}</div>` : ""}
+    ${done && !selfGrade ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "啱！" : P.typing && M === "verb" ? `你寫：${esc(R.picked)}` : "唔啱"} ${deltaChip(M, right)}</b>${feedbackHtml(q)}</div>` : ""}
     ${selfGrade ? `<div class="grades two"><button class="g0" id="sNg">${M === "write" ? "寫錯／唔記得" : "有字唔識讀"}</button><button class="g3" id="sOk">${M === "write" ? "寫啱" : "全部識讀"}</button></div>` : ""}
     <div class="row">
       ${done && !selfGrade ? `<button class="btn primary" id="pNext">${R.i + 1 < R.qs.length ? "下一題" : "睇結果"}</button>` : ""}
@@ -2039,10 +2080,13 @@ function renderPractice() {
     rec(catKeys(q), ok);
     q.ok = ok;
     R.combo = ok ? (R.combo || 0) + 1 : 0;
+    S.game.maxCombo = Math.max(S.game.maxCombo, R.combo);
+    tick();
     if (q.k && ["read", "pick", "write", "mean"].includes(q.mode)) bumpKanji(q.k, ok);
     addXP(ok ? 5 + Math.max(0, R.combo - 2) : 1);
     if (ok) R.score++;
     else { markWeak(q.card); const w = wrongEntry(); R.wrong.push(w); logWrong(M, w.a, w.b); }
+    checkAch();
     save();
   };
   const finish = (pick) => {
@@ -2117,9 +2161,9 @@ const TITLES = [[1, "見習生"], [3, "冒險者"], [6, "戰士"], [10, "騎士"
 const playerLv = () => Math.floor(Math.sqrt(S.game.xp / 25)) + 1;
 const lvXP = (lv) => 25 * (lv - 1) * (lv - 1);
 const titleOf = (lv) => TITLES.filter(([n]) => lv >= n).pop()[1];
-function addXP(n) {
+function addXP(n, raw) {
   const before = playerLv();
-  S.game.xp += n;
+  S.game.xp += raw ? n : Math.round(n * xpMult());
   const after = playerLv();
   if (after > before) levelUp(after);
   updateMeta();
@@ -2130,6 +2174,110 @@ function levelUp(lv) {
   t.hidden = false;
   clearTimeout(levelUp.t);
   levelUp.t = setTimeout(() => (t.hidden = true), 2600);
+}
+
+/* ===== 連續日數、每日目標、寶箱、成就 ===== */
+// EXP 代表努力，永遠唔扣；能力值代表實力，答錯會扣
+function streakInfo() {
+  const g = S.settings.goal, fr = new Set(S.game.frozen);
+  const ok = (d) => (S.log[d] || 0) >= g || fr.has(d);
+  let d = today(), n = 0;
+  if (!ok(d)) d--; // 今日未完成唔計，但都未斷
+  while (ok(d)) { n++; d--; }
+  return { n, done: (S.log[today()] || 0) >= g, cnt: S.log[today()] || 0 };
+}
+const xpMult = () => 1 + Math.min(0.5, streakInfo().n * 0.05);
+// 漏咗一至兩日：有請假卡就自動補返
+function applyFreeze() {
+  const g = S.settings.goal, fr = new Set(S.game.frozen);
+  const ok = (d) => (S.log[d] || 0) >= g || fr.has(d);
+  const missed = [];
+  let d = today() - 1;
+  while (!ok(d) && missed.length < 3) { missed.push(d); d--; }
+  if (!missed.length || !ok(d) || missed.length > S.game.freezes) return;
+  S.game.frozen.push(...missed);
+  S.game.freezes -= missed.length;
+  toast(`用咗 ${missed.length} 張請假卡，連續日數保住咗！`);
+  save(); RENDER[current]();
+}
+function tick() {
+  const t = today(), before = S.log[t] || 0;
+  S.log[t] = before + 1;
+  if (before + 1 >= S.settings.goal && !S.game.chest[t]) goalDone(t);
+}
+function goalDone(t) {
+  S.game.chest[t] = true;
+  Object.keys(S.game.chest).map(Number).filter((d) => d < t - 60).forEach((d) => delete S.game.chest[d]);
+  S.game.goalDays++;
+  const n = streakInfo().n;
+  let freeze = false;
+  if (n % 7 === 0 && S.game.freezes < 2) { S.game.freezes++; freeze = true; }
+  else if (Math.random() < 0.15 && S.game.freezes < 2) { S.game.freezes++; freeze = true; }
+  const gold = Math.round((20 + Math.random() * 40) * xpMult());
+  addXP(gold, true);
+  celebrate(`<b class="game-font">今日目標完成！</b>
+    <span class="big-fire">🔥 ${n}</span><span>連續 ${n} 日</span>
+    <span class="chest">🎁 寶箱：+${gold} EXP${freeze ? " · ❄ 請假卡 +1" : ""}</span>
+    <span class="muted">${n < 3 ? "聽日返嚟，連續 3 日有成就！" : `EXP 加成而家係 ×${xpMult().toFixed(2)}`}</span>`);
+  checkAch();
+}
+function celebrate(html) {
+  const el = document.getElementById("celebrate");
+  el.innerHTML = `<div class="cele-box" role="dialog" aria-label="慶祝">${html}<button class="btn primary" id="celeOk">收下</button></div>`;
+  el.hidden = false;
+  document.getElementById("celeOk").onclick = () => { el.hidden = true; RENDER[current](); };
+}
+const ACH = [
+  ["goal1", "🌱", "第一步", "完成第一次每日目標", () => S.game.goalDays >= 1],
+  ["s3", "🔥", "三日不斷", "連續 3 日", () => streakInfo().n >= 3],
+  ["s7", "🔥", "一星期戰士", "連續 7 日", () => streakInfo().n >= 7],
+  ["s14", "💪", "兩星期不倒", "連續 14 日", () => streakInfo().n >= 14],
+  ["s30", "🏯", "一個月習慣", "連續 30 日", () => streakInfo().n >= 30],
+  ["s100", "👑", "百日修行", "連續 100 日", () => streakInfo().n >= 100],
+  ["c10", "⚡", "十連擊", "連續答啱 10 題", () => S.game.maxCombo >= 10],
+  ["c25", "🌪️", "廿五連擊", "連續答啱 25 題", () => S.game.maxCombo >= 25],
+  ["w50", "📗", "50 個生字", "語彙儲到 50 字", () => statPoints().語彙[0] >= 50],
+  ["w200", "📚", "200 個生字", "語彙儲到 200 字", () => statPoints().語彙[0] >= 200],
+  ["k30", "🈶", "30 個漢字", "漢字儲到 30 字", () => statPoints().漢字[0] >= 30],
+  ["k100", "🀄", "100 個漢字", "漢字儲到 100 字", () => statPoints().漢字[0] >= 100],
+  ["r50", "📖", "讀咗 50 句", "讀句子讀咗 50 句", () => S.stats.read.length >= 50],
+  ["bN5", "🦊", "討伐狐の門番", "打贏 N5 Boss", () => !!(bossRec("N5") || {}).cleared],
+  ["bN4", "👺", "討伐天狗", "打贏 N4 Boss", () => !!(bossRec("N4") || {}).cleared],
+  ["bN3", "🐍", "討伐大蛇", "打贏 N3 Boss", () => !!(bossRec("N3") || {}).cleared],
+  ["bN2", "🐉", "討伐竜王", "打贏 N2 Boss", () => !!(bossRec("N2") || {}).cleared],
+  ["bN1", "👹", "討伐鬼神", "打贏 N1 Boss", () => !!(bossRec("N1") || {}).cleared]
+];
+function checkAch() {
+  const got = ACH.filter(([id, , , , test]) => !S.game.ach[id] && test());
+  got.forEach(([id]) => (S.game.ach[id] = today()));
+  if (got.length) toast(`🏅 解鎖成就：${got.map((a) => a[2]).join("、")}`);
+}
+const decayed = () => Object.entries(S.c).filter(([, st]) => today() - st.d > Math.max(3, st.i)).length;
+function dailyCard() {
+  const s = streakInfo(), g = S.settings.goal, pct = Math.min(100, Math.round((s.cnt / g) * 100)), dc = decayed();
+  return `<div class="daily">
+    <div class="ring" style="--p:${pct}" aria-label="今日 ${s.cnt}/${g}"><span class="game-font">${Math.min(s.cnt, g)}/${g}</span></div>
+    <div class="daily-txt">
+      <b>🔥 連續 ${s.n} 日</b>${xpMult() > 1 ? ` <span class="pill">EXP ×${xpMult().toFixed(2)}</span>` : ""}
+      <span>${s.done ? "今日目標完成！聽日記得返嚟 👍" : s.cnt ? `再做 ${g - s.cnt} 題就完成今日目標` : `做 ${g} 題（大約 10 分鐘）就完成今日目標`}</span>
+      <span class="muted">❄ 請假卡 ${S.game.freezes}/2${dc ? ` · <span class="warn">${dc} 張卡太耐冇溫，能力值跌緊</span>` : ""}</span>
+    </div>
+  </div>`;
+}
+function achHtml() {
+  const n = Object.keys(S.game.ach).length;
+  return `<h2>成就 ${n}/${ACH.length}</h2>
+    <div class="ach-grid">${ACH.map(([id, icon, name, desc]) => `<div class="ach ${S.game.ach[id] ? "" : "locked"}" title="${esc(desc)}"><span aria-hidden="true">${S.game.ach[id] ? icon : "🔒"}</span><b>${esc(name)}</b><small>${esc(desc)}</small></div>`).join("")}</div>`;
+}
+function calendarHtml() {
+  const t = today(), g = S.settings.goal, fr = new Set(S.game.frozen);
+  let cells = "";
+  for (let d = t - 34; d <= t; d++) {
+    const n = S.log[d] || 0, cls = n >= g ? "met" : fr.has(d) ? "frozen" : n ? "part" : "";
+    cells += `<i class="${cls} ${d === t ? "today" : ""}" title="${dayLabel(d)}：${n} 題">${fr.has(d) && n < g ? "❄" : ""}</i>`;
+  }
+  return `<h2>最近 5 個星期</h2><div class="cal">${cells}</div>
+    <div class="legend"><span><i class="cal-key met"></i>完成目標</span><span><i class="cal-key part"></i>有做</span><span>❄ 用咗請假卡</span></div>`;
 }
 
 // 題庫：[類型, 題目, 答案, [錯誤選項×3], 中文]；r＝讀音，m＝意思，g＝文法填空
@@ -2315,8 +2463,8 @@ function renderBoss() {
       r.best = Math.max(r.best, F.hits); r.tries++; r.last = today(); r.cleared = r.cleared || win;
       const bonus = win ? 100 * (F.i + 1) + (first ? 100 : 0) : 0;
       F.bonus = bonus; F.first = first;
-      if (bonus) addXP(bonus);
-      snapshot(); save();
+      if (bonus) addXP(bonus, true);
+      checkAch(); snapshot(); save();
     }
     el.innerHTML = `${arena}
       <div class="done">
@@ -2340,13 +2488,14 @@ function renderBoss() {
       const cls = done ? (o === q.ans ? "right" : o === F.picked ? "wrong" : "") : "";
       return `<button class="opt ${cls}" data-o="${j}" ${done ? "disabled" : ""}>${esc(o)}</button>`;
     }).join("")}</div>
-    ${done ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "命中！" : "被反擊！"}</b>${bossFeedback(q)}</div>
+    ${done ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "命中！" : "被反擊！"} ${deltaChip(q.mode === "bank" ? (q.kind === "g" ? "joshi" : "read") : q.mode, right)}</b>${bossFeedback(q)}</div>
       <div class="row"><button class="btn primary" id="bNext">${F.hits >= BOSS_HP ? "打低咗！睇結果" : F.hearts <= 0 ? "冇晒心……睇結果" : "繼續"}</button>${canSpeak ? `<button class="btn small" id="bSay">聽發音</button>` : ""}</div>` : ""}
     <div class="row"><button class="btn ghost small" id="bQuit">逃走</button></div>`;
   el.querySelectorAll(".opt").forEach((btn) => (btn.onclick = () => {
     F.picked = q.opts[+btn.dataset.o];
     const ok = F.picked === q.ans;
-    if (ok) { F.hits++; F.combo++; const x = 5 * (F.i + 1) + Math.max(0, F.combo - 2); F.xp += x; addXP(x); F.fx = "hit"; }
+    tick();
+    if (ok) { F.hits++; F.combo++; S.game.maxCombo = Math.max(S.game.maxCombo, F.combo); const x = 5 * (F.i + 1) + Math.max(0, F.combo - 2); F.xp += x; addXP(x); F.fx = "hit"; }
     else { F.hearts--; F.combo = 0; F.fx = "hurt"; if (q.card && !q.card.id.startsWith("x")) markWeak(q.card); logWrong("boss", q.q || q.k || q.pre + q.ans, q.zh || ""); }
     if (q.mode !== "bank") rec(catKeys(q), ok);
     if (q.mode === "bank" ? q.kind !== "g" : q.k) bumpKanji(q.mode === "bank" ? q.q : q.k, ok);
@@ -2369,7 +2518,9 @@ const goalTier = () => { let t = 0; BOSSES.forEach((b, i) => { if ((bossRec(b.id
 function mastery(c) {
   const st = S.c[c.id];
   if (!st) return 0;
-  return st.i >= 21 ? 1 : st.i >= 7 ? 0.75 : st.i >= 3 ? 0.5 : st.r >= 1 ? 0.25 : 0;
+  const m = st.i >= 21 ? 1 : st.i >= 7 ? 0.75 : st.i >= 3 ? 0.5 : st.r >= 1 ? 0.25 : 0;
+  // 太耐冇溫（過咗溫習日好耐）會跌一半
+  return today() - st.d > Math.max(3, st.i) ? m / 2 : m;
 }
 function bumpKanji(word, ok) {
   const kj = S.stats.kj;
@@ -2384,12 +2535,10 @@ function statPoints() {
     else gram += m;
   });
   Object.entries(S.stats.kj).forEach(([ch, n]) => { if (n >= 3) kset.add(ch); });
-  const good = (k) => (S.stats.cat[k] ? S.stats.cat[k][0] : 0);
-  const accOr = (k) => { const a = rAcc(k); return a == null ? 0.5 : a; };
   return {
     語彙: [voc, "字"], 漢字: [kset.size, "字"], 文法: [gram, "項"],
-    助詞: [good("m:joshi") * accOr("m:joshi"), "題"], 變化: [good("m:verb") * accOr("m:verb"), "題"],
-    閱讀: [S.stats.read.length * Math.min(1, (readCps() || 0) / 3), "句"]
+    助詞: [spOf("m:joshi"), "分"], 變化: [spOf("m:verb"), "分"],
+    閱讀: [spOf("m:aloud") * Math.min(1, (readCps() || 0) / 3), "句"]
   };
 }
 function stat6() {
@@ -2485,8 +2634,6 @@ function renderStats() {
   const counts = { new: 0, learning: 0, known: 0, due: 0 };
   scope.forEach((c) => counts[status(c)]++);
   const t = today();
-  let week = "";
-  for (let d = t - 13; d <= t; d++) { const n = S.log[d] || 0; week += `<i class="${n >= 20 ? "on2" : n ? "on1" : ""} ${d === t ? "today" : ""}" title="${n} 次"></i>`; }
   let rows = "";
   for (let L = 1; L <= maxLesson(); L++) {
     const cs = CARDS.filter((c) => c.L === L && (c.t === "v" || S.settings.gram));
@@ -2528,6 +2675,8 @@ function renderStats() {
   const lastNote = S.notes[0];
   const ability = `
     ${statusWindow()}
+    ${dailyCard()}
+    ${achHtml()}
     <p class="memory">${esc(memory)}</p>
     <h2>答啱率分析</h2>
     <div class="table-wrap"><table class="ability">
@@ -2554,8 +2703,7 @@ function renderStats() {
       <div class="tile"><b>${streak()}</b><span>連續日數</span></div>
       <div class="tile"><b>${counts.known}</b><span>記得（7日以上）</span></div>
     </div>
-    <h2>最近兩個星期</h2>
-    <div class="week">${week}</div>
+    ${calendarHtml()}
     <h2>每課掌握程度</h2>
     <div class="legend"><span><i class="dot known"></i>記得</span><span><i class="dot learning"></i>學緊</span><span><i class="dot"></i>未學</span><span>右邊＝練習答啱率等級</span></div>
     <div class="lessons">${rows}</div>
@@ -2591,6 +2739,7 @@ function renderSetup() {
         <label for="sCur">而家上到<select id="sCur">${opts}</select></label>
         <label for="sNew">每日新卡數量<input type="number" id="sNew" min="0" max="100" value="${st.newPerDay}"></label>
       </div>
+      <label for="sGoal">每日目標（做幾多題）<select id="sGoal">${[10, 15, 25, 40].map((n) => `<option value="${n}" ${st.goal === n ? "selected" : ""}>${n} 題${n === 15 ? "（大約 10 分鐘）" : ""}</option>`).join("")}</select></label>
       <label for="sDir">生字卡方向
         <select id="sDir"><option value="jz" ${st.dir === "jz" ? "selected" : ""}>睇日文 → 諗意思</option><option value="zj" ${st.dir === "zj" ? "selected" : ""}>睇中文 → 諗日文（較難）</option></select>
       </label>
@@ -2625,6 +2774,7 @@ function renderSetup() {
     st.dir = document.getElementById("sDir").value;
     st.gram = document.getElementById("sGram").checked;
     st.big = document.getElementById("sBig").checked;
+    st.goal = +document.getElementById("sGoal").value;
     st.auto = document.getElementById("sAuto").checked;
     session = null; save(); updateMeta();
   };
@@ -2672,7 +2822,7 @@ function go(v) {
 document.querySelectorAll("#tabs button").forEach((b) => (b.onclick = () => go(b.dataset.v)));
 function updateMeta() {
   const due = CARDS.filter((c) => inScope(c) && S.c[c.id] && S.c[c.id].d <= today()).length;
-  document.getElementById("meta").innerHTML = `<span class="game-font hud-lv">Lv.${playerLv()}</span> ${esc(predicted().name)} · ${due} 張到期`;
+  document.getElementById("meta").innerHTML = `<span class="game-font hud-lv">Lv.${playerLv()}</span> 🔥${streakInfo().n} · ${esc(predicted().name)} · ${due} 張到期`;
   document.body.classList.toggle("big", !!S.settings.big);
 }
 let toastT;
@@ -2681,6 +2831,7 @@ function toast(m) { const t = document.getElementById("toast"); t.textContent = 
 vocabL = gramL = S.settings.cur;
 const start = /^(today|practice|boss|vocab|grammar|stats|setup)$/.test(location.hash.slice(1)) ? location.hash.slice(1) : "today";
 go(start);
+applyFreeze();
 
 /* ===== 雲端同步（db + user） ===== */
 (async () => {
@@ -2710,7 +2861,7 @@ go(start);
     if (remote && remote.upd > (S.upd || 0)) {
       S = remote;
       try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {}
-      session = null; RENDER[current]();
+      session = null; applyFreeze(); RENDER[current]();
     } else if (S.upd > 0) {
       saveRemote();
     }
