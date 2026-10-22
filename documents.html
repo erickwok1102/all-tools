@@ -27,6 +27,10 @@
             </div>
 
             <div class="dz-card">
+                <label class="dz-field" id="profileField">
+                    <span>抬頭</span>
+                    <select data-field="profileId" id="profileSelect"></select>
+                </label>
                 <div class="dz-row">
                     <label class="dz-field">
                         <span>編號</span>
@@ -39,13 +43,13 @@
                 </div>
                 <label class="dz-field">
                     <span>致 (機構 / 客戶名稱)</span>
-                    <input type="text" data-field="toName" list="clientList" placeholder="例：香港聖公會麥理浩夫人中心" autocomplete="off">
+                    <input type="text" data-field="toName" list="clientList" placeholder="打兩個字就會彈舊客出嚟" autocomplete="off">
                     <datalist id="clientList"></datalist>
                 </label>
                 <div class="dz-row">
                     <label class="dz-field">
-                        <span>聯絡電話</span>
-                        <input type="tel" data-field="mobile" placeholder="9261-0810">
+                        <span>聯絡電話 / 電郵</span>
+                        <input type="text" data-field="mobile" placeholder="9261 0810">
                     </label>
                     <label class="dz-field">
                         <span>聯絡人</span>
@@ -54,30 +58,52 @@
                 </div>
                 <label class="dz-field">
                     <span>備註 (Remarks)</span>
-                    <input type="text" data-field="remarks" placeholder="例：相關發票編號">
+                    <input type="text" data-field="remarks" placeholder="例：相關報價單 / 發票編號">
                 </label>
             </div>
 
             <div class="dz-card">
                 <div class="dz-card-head">
                     <h2>項目</h2>
-                    <button class="dz-btn dz-btn-small" id="btnAddItem"><i class="fas fa-plus"></i> 新增項目</button>
+                    <button class="dz-btn dz-btn-small" id="btnAddItem"><i class="fas fa-plus"></i> 空白項目</button>
+                </div>
+                <div class="dz-presets">
+                    <span class="dz-presets-label">一撳加入：</span>
+                    <div class="dz-preset-groups" id="presetBar"></div>
                 </div>
                 <div id="itemList"></div>
                 <div class="dz-total-line">總數：<strong id="editorTotal">$0</strong></div>
             </div>
 
             <div class="dz-card">
+                <div class="dz-row">
+                    <label class="dz-field">
+                        <span>條款範本</span>
+                        <select id="termSetSelect"></select>
+                    </label>
+                    <div class="dz-field dz-field-hint">
+                        <span>&nbsp;</span>
+                        <small id="termSetHint">揀咗範本會覆蓋下面嘅條款</small>
+                    </div>
+                </div>
                 <label class="dz-field">
                     <span>條款 (每行一條，留空即不顯示)</span>
-                    <textarea data-field="terms" rows="5"></textarea>
+                    <textarea data-field="terms" rows="6"></textarea>
                 </label>
                 <div class="dz-checks">
                     <label><input type="checkbox" data-field="showBank"> 顯示付款 / 銀行資料</label>
                     <label><input type="checkbox" data-field="showClientSign"> 顯示客戶簽署欄</label>
-                    <label><input type="checkbox" data-field="showSignature"> 顯示我方簽名圖</label>
+                    <label><input type="checkbox" data-field="showSignature"> 我方簽名</label>
+                    <label><input type="checkbox" data-field="showChop"> 蓋公司印</label>
                     <label><input type="checkbox" data-field="paid"> 蓋「PAID」印</label>
                 </div>
+            </div>
+
+            <div class="dz-card">
+                <label class="dz-field">
+                    <span>內部備註 (唔會印出嚟)</span>
+                    <textarea data-field="note" rows="2" placeholder="例：客話其他團隊平啲 / 已收訂金"></textarea>
+                </label>
             </div>
 
             <div class="dz-actions">
@@ -102,7 +128,7 @@
     <!-- 紀錄 -->
     <dialog class="dz-dialog" id="historyDialog">
         <div class="dz-dialog-head">
-            <h2>紀錄</h2>
+            <h2>紀錄 <small id="historyCount"></small></h2>
             <button class="dz-icon-btn" data-close aria-label="關閉"><i class="fas fa-times"></i></button>
         </div>
         <div class="dz-history-filters">
@@ -131,39 +157,66 @@
             <button class="dz-icon-btn" data-close aria-label="關閉"><i class="fas fa-times"></i></button>
         </div>
         <div class="dz-dialog-body">
+            <label class="dz-field">
+                <span>修改邊個抬頭</span>
+                <select id="settingsProfile"></select>
+            </label>
+
             <h3>公司資料</h3>
-            <label class="dz-field"><span>公司名稱</span><input type="text" data-setting="companyName"></label>
             <div class="dz-row">
-                <label class="dz-field"><span>電話</span><input type="text" data-setting="phone"></label>
-                <label class="dz-field"><span>IG / Facebook</span><input type="text" data-setting="social"></label>
+                <label class="dz-field"><span>抬頭名稱 (只喺揀單時見到)</span><input type="text" data-pf="label"></label>
+                <label class="dz-field"><span>公司名稱</span><input type="text" data-pf="companyName"></label>
             </div>
-            <label class="dz-field"><span>地址</span><input type="text" data-setting="address"></label>
+            <div class="dz-row">
+                <label class="dz-field"><span>電話</span><input type="text" data-pf="phone"></label>
+                <label class="dz-field"><span>IG / Facebook</span><input type="text" data-pf="social"></label>
+            </div>
+            <label class="dz-field"><span>地址</span><input type="text" data-pf="address"></label>
+            <div class="dz-row dz-row-3">
+                <label class="dz-field"><span>報價單編號開頭</span><input type="text" data-pf-prefix="quotation"></label>
+                <label class="dz-field"><span>發票編號開頭</span><input type="text" data-pf-prefix="invoice"></label>
+                <label class="dz-field"><span>收據編號開頭</span><input type="text" data-pf-prefix="receipt"></label>
+            </div>
 
             <h3>付款資料</h3>
-            <label class="dz-field"><span>付款說明</span><input type="text" data-setting="paymentNote"></label>
-            <label class="dz-field"><span>銀行資料</span><textarea data-setting="bankInfo" rows="2" placeholder="例：HSBC Account Number: xxx-xxxxxx-xxx / Account Name: ..."></textarea></label>
+            <label class="dz-field"><span>付款說明</span><input type="text" data-pf="paymentNote"></label>
+            <label class="dz-field"><span>銀行 / FPS 資料</span><textarea data-pf="bankInfo" rows="3" placeholder="例：HSBC Account Number: xxx-xxxxxx-xxx / Account Name: ..."></textarea></label>
 
             <h3>簽署</h3>
             <div class="dz-row">
-                <label class="dz-field"><span>簽署人</span><input type="text" data-setting="signerName"></label>
-                <label class="dz-field"><span>職銜</span><input type="text" data-setting="signerTitle"></label>
+                <label class="dz-field"><span>簽署人</span><input type="text" data-pf="signerName"></label>
+                <label class="dz-field"><span>職銜</span><input type="text" data-pf="signerTitle"></label>
             </div>
             <div class="dz-signature-setting">
-                <img id="signaturePreview" alt="簽名圖">
+                <img data-pf-img="signature" alt="簽名">
                 <div>
                     <label class="dz-btn dz-btn-small">
-                        <i class="fas fa-signature"></i> 上載簽名 / 印章圖
-                        <input type="file" id="signatureFile" accept="image/*" hidden>
+                        <i class="fas fa-signature"></i> 上載簽名
+                        <input type="file" data-pf-upload="signature" accept="image/*" hidden>
                     </label>
-                    <button class="dz-btn dz-btn-small" id="btnClearSignature">移除</button>
+                    <button class="dz-btn dz-btn-small" data-pf-clear="signature">移除</button>
+                </div>
+            </div>
+            <div class="dz-signature-setting">
+                <img data-pf-img="chop" alt="公司印">
+                <div>
+                    <label class="dz-btn dz-btn-small">
+                        <i class="fas fa-stamp"></i> 上載公司印
+                        <input type="file" data-pf-upload="chop" accept="image/*" hidden>
+                    </label>
+                    <button class="dz-btn dz-btn-small" data-pf-clear="chop">移除</button>
                 </div>
             </div>
 
-            <h3>預設條款</h3>
-            <label class="dz-field"><span>報價單</span><textarea data-setting-terms="quotation" rows="5"></textarea></label>
-            <label class="dz-field"><span>發票</span><textarea data-setting-terms="invoice" rows="5"></textarea></label>
-            <label class="dz-field"><span>收據</span><textarea data-setting-terms="receipt" rows="3"></textarea></label>
-            <p class="dz-hint">設定只會儲存喺呢部機嘅瀏覽器。</p>
+            <h3>條款範本</h3>
+            <p class="dz-hint">寫 {company} 會自動換成上面嘅公司名稱。</p>
+            <div id="termSetEditor" class="dz-stack"></div>
+
+            <h3>快捷項目</h3>
+            <p class="dz-hint">喺項目度撳「存做快捷」就會加入呢度。</p>
+            <div id="presetEditor" class="dz-stack"></div>
+
+            <p class="dz-hint">設定只會儲存喺呢部機嘅瀏覽器，換機記得用「匯出備份」。</p>
         </div>
     </dialog>
 
@@ -171,6 +224,7 @@
         <div class="dz-item">
             <div class="dz-item-head">
                 <span class="dz-item-no"></span>
+                <button class="dz-icon-btn" data-action="preset" title="存做快捷項目"><i class="fas fa-star"></i></button>
                 <button class="dz-icon-btn" data-action="up" title="上移"><i class="fas fa-arrow-up"></i></button>
                 <button class="dz-icon-btn" data-action="down" title="下移"><i class="fas fa-arrow-down"></i></button>
                 <button class="dz-icon-btn dz-danger" data-action="remove" title="刪除"><i class="fas fa-trash"></i></button>
@@ -181,7 +235,7 @@
             </label>
             <label class="dz-field">
                 <span>詳情 (日期、時間、地點等，可多行)</span>
-                <textarea data-item="details" rows="3" placeholder="Date: 27-Jan, 2024&#10;Time: 14:00 - 15:00&#10;Location: ..."></textarea>
+                <textarea data-item="details" rows="3" placeholder="Date: &#10;Time: &#10;Location: "></textarea>
             </label>
             <div class="dz-row dz-row-3">
                 <label class="dz-field">
@@ -194,9 +248,13 @@
                 </label>
                 <label class="dz-field">
                     <span>單位</span>
-                    <input type="text" data-item="unit" placeholder="Set / 堂">
+                    <input type="text" data-item="unit" placeholder="堂 / 小時 / Set">
                 </label>
             </div>
+            <label class="dz-field">
+                <span>價錢欄改寫 (選填，例：Waived、(Deposit) $2,000)</span>
+                <input type="text" data-item="priceText">
+            </label>
         </div>
     </template>
 
