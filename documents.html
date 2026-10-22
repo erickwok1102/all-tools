@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>報價單 / 發票 / 收據</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Noto+Sans+HK:wght@300;400;500&display=swap">
     <link rel="stylesheet" href="css/documents.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -41,11 +44,13 @@
                         <input type="date" data-field="date">
                     </label>
                 </div>
-                <label class="dz-field">
-                    <span>致 (機構 / 客戶名稱)</span>
-                    <input type="text" data-field="toName" list="clientList" placeholder="打兩個字就會彈舊客出嚟" autocomplete="off">
-                    <datalist id="clientList"></datalist>
-                </label>
+                <div class="dz-field">
+                    <div class="dz-label-row">
+                        <label for="toName">致 (機構 / 客戶名稱)</label>
+                        <button type="button" class="dz-link-btn" id="btnClients"><i class="fas fa-address-book"></i> 舊客戶</button>
+                    </div>
+                    <input type="text" id="toName" data-field="toName" placeholder="新客直接打名，舊客撳右上角揀" autocomplete="off">
+                </div>
                 <div class="dz-row">
                     <label class="dz-field">
                         <span>聯絡電話 / 電郵</span>
@@ -65,13 +70,12 @@
             <div class="dz-card">
                 <div class="dz-card-head">
                     <h2>項目</h2>
-                    <button class="dz-btn dz-btn-small" id="btnAddItem"><i class="fas fa-plus"></i> 空白項目</button>
-                </div>
-                <div class="dz-presets">
-                    <span class="dz-presets-label">一撳加入：</span>
-                    <div class="dz-preset-groups" id="presetBar"></div>
                 </div>
                 <div id="itemList"></div>
+                <label class="dz-field">
+                    <span class="dz-visually-hidden">加入項目</span>
+                    <select id="addItemSelect" class="dz-add-item"></select>
+                </label>
                 <div class="dz-total-line">總數：<strong id="editorTotal">$0</strong></div>
             </div>
 
@@ -114,6 +118,7 @@
                 <button class="dz-btn" id="btnDuplicate"><i class="fas fa-copy"></i> 複製一份</button>
                 <button class="dz-btn" id="btnNew"><i class="fas fa-file"></i> 開新一張</button>
             </div>
+            <p class="dz-fit" id="fitStatus" hidden></p>
             <p class="dz-status" id="saveStatus" aria-live="polite"></p>
         </section>
 
@@ -148,6 +153,18 @@
                 <input type="file" id="importFile" accept="application/json,.json" hidden>
             </label>
         </div>
+    </dialog>
+
+    <!-- 舊客戶 -->
+    <dialog class="dz-dialog" id="clientDialog">
+        <div class="dz-dialog-head">
+            <h2>舊客戶 <small id="clientCount"></small></h2>
+            <button class="dz-icon-btn" data-close aria-label="關閉"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="dz-history-filters dz-client-filters">
+            <input type="search" id="clientSearch" placeholder="搜尋客戶 / 聯絡人 / 電話">
+        </div>
+        <div class="dz-client-list" id="clientListBox"></div>
     </dialog>
 
     <!-- 設定 -->

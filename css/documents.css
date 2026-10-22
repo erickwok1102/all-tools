@@ -170,57 +170,116 @@ body {
     line-height: 1.3;
 }
 
-/* 快捷項目 */
-.dz-presets {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
+.dz-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }
 
-.dz-presets-label {
+.dz-history-filters.dz-client-filters {
+    grid-template-columns: 1fr;
+}
+
+.dz-label-row label {
     font-size: 0.8125rem;
     color: var(--text-secondary);
     font-weight: 500;
 }
 
-.dz-preset-groups {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.dz-preset-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    align-items: center;
-}
-
-.dz-preset-group-name {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    min-width: 3.2rem;
-}
-
-.dz-chip {
-    border: 1px solid var(--border-color);
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-radius: 999px;
-    padding: 0.3rem 0.7rem;
-    font: inherit;
-    font-size: 0.8125rem;
-    cursor: pointer;
-}
-
-.dz-chip:hover {
-    border-color: var(--primary-color);
+/* 揀項目 */
+.dz-add-item {
+    font-weight: 500;
     color: var(--primary-dark);
 }
 
-.dz-chip small {
+.dz-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dz-link-btn {
+    border: none;
+    background: none;
+    color: var(--primary-color);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.dz-link-btn:hover {
+    text-decoration: underline;
+}
+
+.dz-fit {
+    font-size: 0.8125rem;
+    border-radius: var(--border-radius);
+    padding: 0.5rem 0.75rem;
+}
+
+.dz-fit-shrunk {
+    background: #eef2ff;
+    color: #3730a3;
+}
+
+.dz-fit-over {
+    background: #fff1f2;
+    color: #9f1239;
+}
+
+/* 舊客戶 */
+.dz-client-list {
+    padding: 0.5rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+
+.dz-client-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.1rem 0.75rem;
+    text-align: left;
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: #fff;
+    font: inherit;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.dz-client-row:hover {
+    border-color: var(--primary-color);
+    background: #f5f6ff;
+}
+
+.dz-client-row strong {
+    font-weight: 600;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.dz-client-row span {
+    font-size: 0.8125rem;
     color: var(--text-secondary);
-    margin-left: 0.25rem;
+}
+
+.dz-client-row .dz-client-meta {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    text-align: right;
+    font-size: 0.75rem;
+    white-space: nowrap;
 }
 
 .dz-stack {
@@ -568,104 +627,177 @@ body {
     padding: 2rem 0;
 }
 
-/* ========== 文件本身 (A4) ========== */
+/* ========== 文件本身 (A4) ==========
+   極簡黑白：細字、髮絲線、大量留白。--fs 由 JS 調，內容太長時自動縮細 */
 .doc-page {
+    --fs: 1;
+    --ink: #161616;
+    --ink-soft: #5e5e5e;
+    --ink-faint: #9a9a9a;
+    --hair: #dedede;
     width: 210mm;
-    min-height: 297mm;
+    height: 297mm;
     background: #fff;
-    color: var(--doc-text);
-    font-family: "Open Sans", "Helvetica Neue", Arial, "PingFang HK", "Microsoft JhengHei", sans-serif;
-    font-size: 10.5pt;
-    line-height: 1.45;
-    padding: 14mm 16mm 16mm;
-    display: flex;
-    flex-direction: column;
+    color: var(--ink);
+    font-family: "Jost", "Noto Sans HK", "Helvetica Neue", Arial, "PingFang HK", "Microsoft JhengHei", sans-serif;
+    font-weight: 300;
+    font-size: calc(8pt * var(--fs));
+    line-height: 1.6;
+    letter-spacing: 0.01em;
     position: relative;
+    overflow: hidden;
     transform-origin: top left;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.1);
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
 }
 
-.doc-company {
-    text-align: right;
-    font-size: 8.5pt;
-    line-height: 1.5;
-    white-space: pre-line;
+.doc-page.doc-long {
+    height: auto;
+    min-height: 297mm;
+    overflow: visible;
 }
 
-.doc-title {
+.doc-inner {
+    min-height: 100%;
+    padding: 20mm 18mm 16mm;
     display: flex;
-    align-items: center;
-    gap: 4mm;
-    font-size: 24pt;
-    font-weight: 400;
-    letter-spacing: 0.5pt;
-    margin-top: 2mm;
-    line-height: 1.1;
+    flex-direction: column;
 }
 
-.doc-mark {
-    width: 9mm;
-    height: 9mm;
-    background: var(--doc-accent);
-    flex-shrink: 0;
+.doc-label {
+    display: block;
+    font-size: calc(5.8pt * var(--fs));
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 1.2mm;
+}
+
+.doc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10mm;
+    padding-bottom: 7mm;
+    border-bottom: 0.15mm solid var(--ink);
+}
+
+.doc-brand-name {
+    font-size: calc(7.4pt * var(--fs));
+    font-weight: 500;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+}
+
+.doc-brand-lines {
+    margin-top: 1.5mm;
+    font-size: calc(6.6pt * var(--fs));
+    color: var(--ink-soft);
+    letter-spacing: 0.06em;
+}
+
+.doc-type {
+    font-size: calc(17pt * var(--fs));
+    font-weight: 300;
+    letter-spacing: 0.42em;
+    margin-right: -0.42em;
+    line-height: 1;
+    text-transform: uppercase;
 }
 
 .doc-meta {
-    margin-top: 2mm;
-    font-size: 10pt;
-    line-height: 1.5;
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    gap: 8mm;
+    margin-top: 8mm;
 }
 
-.doc-meta div {
+.doc-meta-value {
+    font-size: calc(7.6pt * var(--fs));
     white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.doc-client-name {
+    font-weight: 400;
+    font-size: calc(8.4pt * var(--fs));
+}
+
+.doc-meta-block + .doc-meta-block {
+    margin-top: 3.5mm;
+}
+
+.doc-paid {
+    display: inline-block;
+    margin-top: 3.5mm;
+    padding: 0.8mm 2.6mm;
+    border: 0.15mm solid var(--ink);
+    font-size: calc(6pt * var(--fs));
+    font-weight: 500;
+    letter-spacing: 0.3em;
 }
 
 .doc-items {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10mm;
+    margin-top: 11mm;
+    table-layout: fixed;
 }
 
 .doc-items th {
-    font-size: 14pt;
+    font-size: calc(5.8pt * var(--fs));
     font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
     text-align: left;
-    padding-bottom: 1.5mm;
-    border-bottom: 1.6mm solid var(--doc-accent);
-}
-
-.doc-items th:last-child,
-.doc-items td:last-child {
-    text-align: right;
+    padding: 0 0 2mm;
+    border-bottom: 0.15mm solid var(--ink);
 }
 
 .doc-items td {
     vertical-align: top;
-    padding-top: 3mm;
+    padding: 3.2mm 0 3.4mm;
+    border-bottom: 0.1mm solid var(--hair);
+    font-variant-numeric: tabular-nums;
 }
 
-.doc-items td:last-child {
-    white-space: nowrap;
-    padding-left: 6mm;
-}
+.doc-items .c-no { width: 8mm; color: var(--ink-faint); }
+.doc-items .c-qty { width: 18mm; text-align: right; }
+.doc-items .c-unit { width: 24mm; text-align: right; }
+.doc-items .c-amt { width: 28mm; text-align: right; }
+.doc-items td.c-desc { padding-right: 6mm; }
 
 .doc-item-title {
+    font-weight: 400;
     white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .doc-item-details {
-    padding-left: 5mm;
     margin-top: 1mm;
+    font-size: calc(7pt * var(--fs));
+    color: var(--ink-soft);
     white-space: pre-wrap;
-    font-size: 9.5pt;
+    word-break: break-word;
+    line-height: 1.55;
 }
 
-.doc-item-calc {
-    display: block;
-    font-size: 8.5pt;
-    color: #777;
+.doc-total {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 9mm;
+    margin-top: 5mm;
+}
+
+.doc-total-amount {
+    font-size: calc(11pt * var(--fs));
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
 }
 
 .doc-spacer {
@@ -673,57 +805,46 @@ body {
     min-height: 8mm;
 }
 
-.doc-payment {
-    font-size: 8.5pt;
-    margin-bottom: 2mm;
-    white-space: pre-wrap;
-}
-
-.doc-payment-note {
-    font-size: 10pt;
-    margin-bottom: 1mm;
-}
-
-.doc-rule {
-    border-top: 0.6mm solid var(--doc-accent);
-}
-
-.doc-total {
+.doc-foot {
     display: flex;
-    justify-content: flex-end;
-    align-items: baseline;
-    gap: 10mm;
-    padding: 3mm 0 0;
+    flex-direction: column;
+    gap: 5mm;
 }
 
-.doc-total-amount {
-    min-width: 30mm;
-    text-align: right;
-    font-weight: 600;
-    padding: 0 1mm 1mm;
-    border-bottom: 1.8mm double var(--doc-accent);
+.doc-payment {
+    font-size: calc(6.6pt * var(--fs));
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .doc-terms {
-    margin-top: 8mm;
-    font-size: 8pt;
-    line-height: 1.5;
-    padding-left: 4mm;
+    margin: 0;
+    padding-left: 3.6mm;
+    font-size: calc(6pt * var(--fs));
+    line-height: 1.55;
+    color: var(--ink-soft);
+    column-count: 2;
+    column-gap: 8mm;
+}
+
+.doc-terms li {
+    break-inside: avoid;
+    margin-bottom: 0.8mm;
+    padding-left: 0.5mm;
 }
 
 .doc-signs {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    gap: 10mm;
-    margin-top: 12mm;
+    gap: 14mm;
+    margin-top: 3mm;
 }
 
 .doc-sign {
-    width: 62mm;
-    text-align: center;
-    font-size: 10pt;
-    position: relative;
+    width: 58mm;
+    font-size: calc(6.6pt * var(--fs));
 }
 
 .doc-sign-own {
@@ -731,63 +852,58 @@ body {
 }
 
 .doc-sign-space {
-    height: 20mm;
+    position: relative;
+    height: 17mm;
     display: flex;
     align-items: flex-end;
-    justify-content: center;
-}
-
-.doc-sign-space {
-    position: relative;
 }
 
 .doc-sign-sig {
-    max-height: 22mm;
-    max-width: 52mm;
+    height: 16mm;
+    max-width: 40mm;
     object-fit: contain;
-    margin-bottom: -5mm;
+    object-position: left bottom;
+    margin-bottom: -2mm;
     position: relative;
     z-index: 1;
 }
 
 .doc-sign-chop {
     position: absolute;
-    right: -6mm;
-    bottom: -9mm;
-    width: 25mm;
-    height: 25mm;
+    right: 2mm;
+    bottom: -4mm;
+    width: 20mm;
+    height: 20mm;
     object-fit: contain;
-    opacity: 0.92;
+    opacity: 0.9;
 }
 
-.doc-sign-line {
-    border-top: 0.5mm solid var(--doc-accent);
-    padding-top: 1.5mm;
+.doc-sign-rule {
+    border-top: 0.15mm solid var(--ink);
+    margin-bottom: 1.6mm;
 }
 
-.doc-sign-title {
-    border-top: 0.5mm solid var(--doc-accent);
-    margin-top: 1.5mm;
-    padding-top: 1.5mm;
+.doc-sign-name {
+    font-weight: 400;
+    letter-spacing: 0.04em;
 }
 
-.doc-client-sign .doc-sign-line + .doc-sign-line {
-    margin-top: 9mm;
+.doc-sign-role {
+    color: var(--ink-faint);
 }
 
-.doc-paid {
+.doc-client-sign .doc-sign-space {
+    height: 17mm;
+}
+
+/* 預覽入面標出 A4 底線，超出就睇到 */
+.doc-page.doc-long::after {
+    content: "";
     position: absolute;
-    right: 24mm;
-    top: 40mm;
-    transform: rotate(-14deg);
-    border: 1.2mm solid #c0392b;
-    color: #c0392b;
-    font-size: 26pt;
-    font-weight: 800;
-    letter-spacing: 3pt;
-    padding: 1mm 6mm;
-    border-radius: 3mm;
-    opacity: 0.8;
+    left: 0;
+    right: 0;
+    top: 297mm;
+    border-top: 0.4mm dashed #e11d48;
 }
 
 /* 手機 */
@@ -860,8 +976,9 @@ body {
     .doc-page {
         transform: none !important;
         box-shadow: none;
-        height: 297mm;
-        min-height: 0;
-        overflow: hidden;
+    }
+
+    .doc-page.doc-long::after {
+        display: none;
     }
 }

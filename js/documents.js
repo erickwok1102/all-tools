@@ -331,81 +331,112 @@
         const doc = current;
         const type = TYPES[doc.type];
         const profile = profileOf(doc);
-        const company = [profile.companyName, profile.phone, profile.social, profile.address]
-            .filter(Boolean).map(esc).join('\n');
-        const mobile = [doc.mobile, doc.contact ? '(' + doc.contact + ')' : ''].filter(Boolean).join(' ');
+        const social = profile.social ? '@' + profile.social.replace(/^@/, '') : '';
+        const brandLines = [profile.phone, social, profile.address].filter(Boolean).map(esc).join('&ensp;·&ensp;');
 
         const rows = doc.items.map((item, i) => {
-            const amount = itemAmount(item);
             const qty = Number(item.qty) || 0;
-            let price;
-            if (item.priceText) {
-                price = esc(item.priceText);
-            } else if (qty === 1 && !item.unit) {
-                price = money(amount);
-            } else {
-                price = money(item.price) + (item.unit ? '/' + esc(item.unit) : '') +
-                    '<span class="doc-item-calc">× ' + esc(qty) + ' = ' + money(amount) + '</span>';
-            }
             const hasContent = item.title || item.price || item.priceText;
-            return '<tr><td>' +
-                '<div class="doc-item-title">(' + (i + 1) + ') ' + esc(item.title) + '</div>' +
-                (item.details ? '<div class="doc-item-details">' + esc(item.details) + '</div>' : '') +
-                '</td><td>' + (hasContent ? price : '') + '</td></tr>';
+            const showQty = hasContent && !item.priceText && (qty !== 1 || item.unit);
+            const amount = item.priceText ? esc(item.priceText) : (hasContent ? money(itemAmount(item)) : '');
+            return '<tr>' +
+                '<td class="c-no">' + String(i + 1).padStart(2, '0') + '</td>' +
+                '<td class="c-desc"><div class="doc-item-title">' + esc(item.title) + '</div>' +
+                    (item.details ? '<div class="doc-item-details">' + esc(item.details) + '</div>' : '') + '</td>' +
+                '<td class="c-qty">' + (showQty ? esc(qty) + (item.unit ? ' ' + esc(item.unit) : '') : '') + '</td>' +
+                '<td class="c-unit">' + (showQty ? money(item.price) : '') + '</td>' +
+                '<td class="c-amt">' + amount + '</td>' +
+            '</tr>';
         }).join('');
 
         const terms = (doc.terms || '').split('\n').map(t => t.trim()).filter(Boolean);
         const showBank = doc.showBank && (profile.paymentNote || profile.bankInfo);
-
         const signature = doc.showSignature && profile.signature
             ? '<img class="doc-sign-sig" src="' + esc(profile.signature) + '" alt="">' : '';
         const chop = doc.showChop && profile.chop
             ? '<img class="doc-sign-chop" src="' + esc(profile.chop) + '" alt="">' : '';
-
         const clientSign = doc.showClientSign
             ? '<div class="doc-sign doc-client-sign">' +
                 '<div class="doc-sign-space"></div>' +
-                '<div class="doc-sign-line">Client Signature with Company Chop</div>' +
-                '<div class="doc-sign-line">Client Person Name and Title</div>' +
-                '<div class="doc-sign-line">Date of Contract (DD/MM/YYYY)</div>' +
+                '<div class="doc-sign-rule"></div>' +
+                '<div class="doc-sign-name">Client Signature &amp; Company Chop</div>' +
+                '<div class="doc-sign-role">Name / Title / Date</div>' +
               '</div>'
             : '';
+        const contactLabel = /@/.test(doc.mobile) ? 'Email' : 'Tel';
 
-        $('#docPage').innerHTML =
-            '<div class="doc-company">' + company + '</div>' +
-            '<div class="doc-title"><span class="doc-mark"></span>' + type.title + '</div>' +
-            '<div class="doc-meta">' +
-                '<div>' + type.numberLabel + ': ' + esc(doc.number) + '</div>' +
-                '<div>Date: ' + displayDate(doc.date) + '</div>' +
-                '<div>To: ' + esc(doc.toName) + '</div>' +
-                '<div>' + (/@/.test(doc.mobile) ? 'Contact' : 'Mobile') + ': ' + esc(mobile) + '</div>' +
-                '<div>Remarks: ' + esc(doc.remarks) + '</div>' +
-            '</div>' +
-            (doc.paid ? '<div class="doc-paid">PAID</div>' : '') +
-            '<table class="doc-items"><thead><tr><th>DESCRIPTION</th><th>PRICE (HKD)</th></tr></thead>' +
-            '<tbody>' + rows + '</tbody></table>' +
-            '<div class="doc-spacer"></div>' +
-            (showBank
-                ? '<div class="doc-payment">' +
-                    (profile.paymentNote ? '<div class="doc-payment-note">' + esc(profile.paymentNote) + '</div>' : '') +
-                    esc(profile.bankInfo) +
-                  '</div>'
-                : '') +
-            '<div class="doc-rule"></div>' +
-            '<div class="doc-total"><span>Total:</span><span class="doc-total-amount">' + money(docTotal(doc)) + '</span></div>' +
-            (terms.length
-                ? '<ol class="doc-terms">' + terms.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol>'
-                : '') +
-            '<div class="doc-signs">' + clientSign +
-                '<div class="doc-sign doc-sign-own">' +
-                    '<div class="doc-sign-space">' + signature + chop + '</div>' +
-                    '<div class="doc-sign-line">' + esc(profile.signerName) + '</div>' +
-                    '<div class="doc-sign-title">' + esc(profile.signerTitle) + '</div>' +
+        $('#docPage').innerHTML = '<div class="doc-inner">' +
+            '<header class="doc-head">' +
+                '<div><div class="doc-brand-name">' + esc(profile.companyName) + '</div>' +
+                    (brandLines ? '<div class="doc-brand-lines">' + brandLines + '</div>' : '') + '</div>' +
+                '<div class="doc-type">' + type.title + '</div>' +
+            '</header>' +
+            '<section class="doc-meta">' +
+                '<div><span class="doc-label">' + (doc.type === 'quotation' ? 'Prepared for' : 'Billed to') + '</span>' +
+                    '<div class="doc-meta-value doc-client-name">' + esc(doc.toName) + '</div>' +
+                    (doc.contact ? '<div class="doc-meta-value">Attn: ' + esc(doc.contact) + '</div>' : '') +
+                    (doc.mobile ? '<div class="doc-meta-value">' + contactLabel + ': ' + esc(doc.mobile) + '</div>' : '') +
                 '</div>' +
-            '</div>';
+                '<div><div class="doc-meta-block"><span class="doc-label">' + type.numberLabel + ' No.</span><div class="doc-meta-value">' + esc(doc.number) + '</div></div>' +
+                    '<div class="doc-meta-block"><span class="doc-label">Date</span><div class="doc-meta-value">' + displayDate(doc.date) + '</div></div></div>' +
+                '<div>' + (doc.remarks ? '<span class="doc-label">Remarks</span><div class="doc-meta-value">' + esc(doc.remarks) + '</div>' : '') +
+                    (doc.paid ? '<span class="doc-paid">PAID</span>' : '') + '</div>' +
+            '</section>' +
+            '<table class="doc-items"><thead><tr>' +
+                '<th class="c-no">No.</th><th class="c-desc">Description</th><th class="c-qty">Qty</th><th class="c-unit">Unit Price</th><th class="c-amt">Amount</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<div class="doc-total"><span class="doc-label">Total (HKD)</span><span class="doc-total-amount">' + money(docTotal(doc)) + '</span></div>' +
+            '<div class="doc-spacer"></div>' +
+            '<footer class="doc-foot">' +
+                (showBank
+                    ? '<div><span class="doc-label">Payment</span><div class="doc-payment">' +
+                        esc([profile.paymentNote, profile.bankInfo].filter(Boolean).join('\n')) + '</div></div>'
+                    : '') +
+                (terms.length
+                    ? '<div><span class="doc-label">Terms &amp; Conditions</span><ol class="doc-terms">' +
+                        terms.map(t => '<li>' + esc(t) + '</li>').join('') + '</ol></div>'
+                    : '') +
+                '<div class="doc-signs">' + clientSign +
+                    '<div class="doc-sign doc-sign-own">' +
+                        '<div class="doc-sign-space">' + signature + chop + '</div>' +
+                        '<div class="doc-sign-rule"></div>' +
+                        '<div class="doc-sign-name">' + esc(profile.signerName) + '</div>' +
+                        '<div class="doc-sign-role">' + esc([profile.signerTitle, profile.companyName].filter(Boolean).join(', ')) + '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</footer>' +
+        '</div>';
 
         $('#editorTotal').textContent = money(docTotal(doc));
+        fitContent();
         fitPreview();
+    }
+
+    // 確保成張單擺得落一張 A4：先試縮細字，真係太長先變兩頁並提示
+    const MIN_FONT_SCALE = 0.8;
+    function fitContent() {
+        const page = $('#docPage');
+        const inner = $('.doc-inner', page);
+        page.classList.remove('doc-long');
+        let scale = 1;
+        page.style.setProperty('--fs', scale);
+        while (inner.offsetHeight > page.clientHeight + 1 && scale > MIN_FONT_SCALE) {
+            scale = Math.round((scale - 0.04) * 100) / 100;
+            page.style.setProperty('--fs', scale);
+        }
+        const status = $('#fitStatus');
+        if (inner.offsetHeight > page.clientHeight + 1) {
+            page.classList.add('doc-long');
+            status.className = 'dz-fit dz-fit-over';
+            status.textContent = '內容太長，一張 A4 放唔晒 (預覽紅線以下會印到第二頁)。可以刪短啲詳情或條款。';
+            status.hidden = false;
+        } else if (scale < 1) {
+            status.className = 'dz-fit dz-fit-shrunk';
+            status.textContent = '內容較多，已自動縮細字體 (' + Math.round(scale * 100) + '%) 確保擺得落一張 A4。';
+            status.hidden = false;
+        } else {
+            status.hidden = true;
+        }
     }
 
     // 預覽按闊度縮細
@@ -450,7 +481,7 @@
         $('#btnToInvoice').hidden = current.type !== 'quotation';
         $('#btnToReceipt').hidden = current.type === 'receipt';
         fillTermSetSelect();
-        renderPresetBar();
+        renderAddItemSelect();
         renderItems();
         renderPreview();
     }
@@ -472,20 +503,38 @@
         });
     }
 
-    function renderPresetBar() {
+    function renderAddItemSelect() {
         const presets = settings.presets.filter(p => !p.profileId || p.profileId === current.profileId);
         const groups = {};
         presets.forEach(p => {
             const key = p.category || 'custom';
             (groups[key] = groups[key] || []).push(p);
         });
-        $('#presetBar').innerHTML = Object.keys(groups).map(key =>
-            '<div class="dz-preset-group"><span class="dz-preset-group-name">' + esc(CATEGORY_NAMES[key] || key) + '</span>' +
-            groups[key].map(p =>
-                '<button class="dz-chip" data-preset="' + esc(p.id) + '">' + esc(p.label) +
-                (p.price ? '<small>' + money(p.price) + (p.unit ? '/' + esc(p.unit) : '') + '</small>' : '') +
-                '</button>').join('') +
-            '</div>').join('') || '<span class="dz-hint">未有快捷項目</span>';
+        $('#addItemSelect').innerHTML =
+            '<option value="">＋ 加入項目…</option>' +
+            '<option value="__blank">空白項目 (自己填)</option>' +
+            Object.keys(groups).map(key =>
+                '<optgroup label="' + esc(CATEGORY_NAMES[key] || key) + '">' +
+                groups[key].map(p =>
+                    '<option value="' + esc(p.id) + '">' + esc(p.label) +
+                    (p.price ? ' — ' + money(p.price) + (p.unit ? '/' + esc(p.unit) : '') : '') + '</option>').join('') +
+                '</optgroup>').join('');
+    }
+
+    function addBlankItem() {
+        const items = current.items;
+        if (!(items.length === 1 && isBlankItem(items[0]))) items.push(blankItem());
+        markDirty();
+        renderItems();
+        renderPreview();
+        focusLastItem();
+    }
+
+    function focusLastItem() {
+        const titles = $$('#itemList [data-item="title"]');
+        const last = titles[titles.length - 1];
+        last.focus();
+        last.closest('.dz-item').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
     function addPreset(id) {
@@ -517,8 +566,7 @@
         markDirty();
         renderItems();
         renderPreview();
-        const titles = $$('#itemList [data-item="title"]');
-        titles[titles.length - 1].focus();
+        focusLastItem();
     }
 
     function markDirty() {
@@ -530,21 +578,60 @@
         $('#saveStatus').textContent = text;
     }
 
-    function updateClientList() {
-        const names = Array.from(new Set(docs.map(d => d.toName).filter(Boolean))).sort();
-        $('#clientList').innerHTML = names.map(n => '<option value="' + esc(n) + '">').join('');
+    // 由紀錄整理出客戶清單 (最近用過排先)
+    function clientList() {
+        const map = new Map();
+        docs.forEach(d => {
+            if (!d.toName) return;
+            const key = d.toName.trim();
+            const entry = map.get(key) || { name: key, count: 0, last: '', mobile: '', contact: '', profileId: d.profileId };
+            entry.count++;
+            if ((d.date || '') >= entry.last) {
+                entry.last = d.date || '';
+                entry.profileId = d.profileId;
+                if (d.mobile || d.contact) {
+                    entry.mobile = d.mobile || '';
+                    entry.contact = d.contact || '';
+                }
+            }
+            map.set(key, entry);
+        });
+        return Array.from(map.values()).sort((a, b) => b.last.localeCompare(a.last));
     }
 
-    // 揀返舊客時自動填返電話同聯絡人
-    function autofillClient(name) {
-        if (current.mobile || current.contact) return;
-        const match = docs.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-            .find(d => d.toName === name && (d.mobile || d.contact));
-        if (!match) return;
-        current.mobile = match.mobile || '';
-        current.contact = match.contact || '';
-        $('[data-field="mobile"]').value = current.mobile;
-        $('[data-field="contact"]').value = current.contact;
+    function renderClients() {
+        const query = $('#clientSearch').value.trim().toLowerCase();
+        const list = clientList().filter(c => !query ||
+            [c.name, c.contact, c.mobile].join(' ').toLowerCase().includes(query));
+        $('#clientCount').textContent = list.length + ' 個';
+        $('#clientListBox').innerHTML = list.length
+            ? list.map(c =>
+                '<button type="button" class="dz-client-row" data-client="' + esc(c.name) + '">' +
+                    '<strong>' + esc(c.name) + '</strong>' +
+                    '<span>' + esc([c.contact, c.mobile].filter(Boolean).join(' · ') || '冇聯絡資料') + '</span>' +
+                    '<span class="dz-client-meta">' + c.count + ' 張<br>' + displayDate(c.last) + '</span>' +
+                '</button>').join('')
+            : '<p class="dz-empty">' + (docs.length ? '搵唔到' : '未有舊客戶紀錄，可以喺「紀錄」匯入備份') + '</p>';
+    }
+
+    function pickClient(name) {
+        const client = clientList().find(c => c.name === name);
+        if (!client) return;
+        current.toName = client.name;
+        current.mobile = client.mobile;
+        current.contact = client.contact;
+        $('[data-field="toName"]').value = client.name;
+        $('[data-field="mobile"]').value = client.mobile;
+        $('[data-field="contact"]').value = client.contact;
+        // 跟返上次用嘅抬頭 (例如顧問客)
+        if (client.profileId && client.profileId !== current.profileId && settings.profiles.some(p => p.id === client.profileId)) {
+            const select = $('[data-field="profileId"]');
+            select.value = client.profileId;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        markDirty();
+        renderPreview();
+        $('#clientDialog').close();
     }
 
     function onFieldInput(e) {
@@ -567,10 +654,9 @@
                 $('[data-field="terms"]').value = current.terms;
             }
             fillTermSetSelect();
-            renderPresetBar();
+            renderAddItemSelect();
         }
         if (field === 'terms') fillTermSetSelect();
-        if (field === 'toName' && e.type === 'change') autofillClient(el.value);
         markDirty();
         renderPreview();
     }
@@ -625,7 +711,7 @@
             priceText: item.priceText
         });
         saveSettings();
-        renderPresetBar();
+        renderAddItemSelect();
         setStatus('已存做快捷項目：' + item.title);
     }
 
@@ -663,7 +749,6 @@
         if (index >= 0) docs[index] = copy; else docs.push(copy);
         if (!writeJSON(DOCS_KEY, docs)) return false;
         dirty = false;
-        updateClientList();
         setStatus('已儲存 ' + new Date(now).toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }));
         return true;
     }
@@ -768,7 +853,6 @@
             if (!confirm('刪除 ' + doc.number + '？呢個動作唔可以還原。')) return;
             docs = docs.filter(d => d.id !== doc.id);
             writeJSON(DOCS_KEY, docs);
-            updateClientList();
             if (current.id === doc.id) markDirty();
             renderHistory();
             return;
@@ -839,7 +923,6 @@
                 alert('檔案格式唔啱');
                 return;
             }
-            updateClientList();
             renderHistory();
             fillForm();
             alert(message);
@@ -916,7 +999,7 @@
             settings.presets = settings.presets.filter(p => p.id !== del.dataset.deletePreset);
             saveSettings();
             fillSettings();
-            renderPresetBar();
+            renderAddItemSelect();
         }
     }
 
@@ -958,9 +1041,21 @@
             if (e.target.dataset.field) onFieldInput(e);
         });
         $('#itemList').addEventListener('click', onItemAction);
-        $('#presetBar').addEventListener('click', e => {
-            const chip = e.target.closest('[data-preset]');
-            if (chip) addPreset(chip.dataset.preset);
+        $('#addItemSelect').addEventListener('change', e => {
+            const value = e.target.value;
+            e.target.value = '';
+            if (value === '__blank') addBlankItem();
+            else if (value) addPreset(value);
+        });
+        $('#btnClients').addEventListener('click', () => {
+            $('#clientSearch').value = '';
+            renderClients();
+            $('#clientDialog').showModal();
+        });
+        $('#clientSearch').addEventListener('input', renderClients);
+        $('#clientListBox').addEventListener('click', e => {
+            const row = e.target.closest('[data-client]');
+            if (row) pickClient(row.dataset.client);
         });
         $('#termSetSelect').addEventListener('change', e => {
             const id = e.target.value;
@@ -974,15 +1069,6 @@
         $('#typeSegment').addEventListener('click', e => {
             const btn = e.target.closest('button[data-type]');
             if (btn) switchType(btn.dataset.type);
-        });
-
-        $('#btnAddItem').addEventListener('click', () => {
-            current.items.push(blankItem());
-            markDirty();
-            renderItems();
-            renderPreview();
-            const titles = $$('#itemList [data-item="title"]');
-            titles[titles.length - 1].focus();
         });
 
         $('#btnSave').addEventListener('click', () => {
@@ -1030,7 +1116,7 @@
         $('#settingsDialog').addEventListener('click', onSettingClick);
         $('#settingsDialog').addEventListener('close', () => {
             fillTermSetSelect();
-            renderPresetBar();
+            renderAddItemSelect();
         });
 
         $$('[data-close]').forEach(btn => {
@@ -1043,6 +1129,8 @@
         });
 
         window.addEventListener('resize', fitPreview);
+        // 字型載入後字闊會變，要重新量過
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => renderPreview());
         window.addEventListener('beforeunload', e => {
             if (!dirty) return;
             e.preventDefault();
@@ -1054,7 +1142,6 @@
     window.yatonDocuments = {
         importData(data) {
             const message = importData(data);
-            updateClientList();
             fillForm();
             return message;
         }
@@ -1063,6 +1150,5 @@
     fillProfileSelects();
     current = newDoc('quotation');
     bindEvents();
-    updateClientList();
     fillForm();
 })();
