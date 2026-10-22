@@ -212,6 +212,7 @@ body.big .opt { font-size: 1.6rem; }
 .stat-grid div { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 4px; }
 .stat-grid span { font-size: var(--step--1); color: var(--ink-soft); }
 .stat-grid b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.stat-grid small { grid-column: 1 / -1; font-size: 0.7rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .rank { font-style: normal; font-family: "DotGothic16", var(--font-ui); font-weight: 700; width: 1.4em; text-align: center; border-radius: 3px; color: var(--sheet); background: var(--ink-soft); }
 .r-S { background: var(--shu); } .r-A { background: var(--yamabuki); } .r-B { background: var(--matcha); } .r-C { background: var(--ai); }
 .status-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -1259,7 +1260,7 @@ const maxLesson = () => Math.max(16, ...CARDS.map((c) => c.L || 0));
 const LS_KEY = "minna-fukushu-v1";
 const today = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
 function freshState() {
-  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true, big: false, auto: true }, c: {}, log: {}, nt: { d: 0, n: 0 }, stats: { cat: {}, rc: {}, wrong: [], read: [] }, hist: {}, notes: [], game: { xp: 0, boss: {} }, upd: 0 };
+  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true, big: false, auto: true }, c: {}, log: {}, nt: { d: 0, n: 0 }, stats: { cat: {}, rc: {}, kj: {}, wrong: [], read: [] }, hist: {}, notes: [], game: { xp: 0, boss: {} }, upd: 0 };
 }
 function normalize(s) {
   const f = freshState();
@@ -1446,6 +1447,7 @@ function answer(c, g) {
   S.log[today()] = (S.log[today()] || 0) + 1;
   rec(["srs:" + c.t, "L" + c.L], g >= 2);
   addXP(g >= 2 ? 2 : 1);
+  if (c.t === "v" && c.kanji) bumpKanji(c.kanji, g >= 2);
   if (g === 0) logWrong("srs", jpOf(c), c.mean);
   s.done++; s.i++; s.shown = false;
   save(); renderToday();
@@ -1708,14 +1710,16 @@ const readCps = () => { const r = S.stats.read.slice(-5); return r.length ? r.re
 // 讀字速度：每秒 4 個字當 100 分
 const dimScore = (k) => (k === "read" ? (readCps() == null ? null : Math.min(1, readCps() / 4)) : rAcc(k));
 const GRADE = (s) => (s == null ? ["未測", "--ink-soft"] : s < 0.5 ? ["要加油", "--shu"] : s < 0.7 ? ["基礎", "--yamabuki"] : s < 0.85 ? ["穩固", "--ai"] : ["熟練", "--matcha"]);
+// 一課要真係溫過（卡片記得）＋練習答得啱，先會高分
 function lessonScore(L) {
   const cs = CARDS.filter((c) => c.L === L);
-  const srsM = cs.length ? cs.filter((c) => S.c[c.id] && S.c[c.id].r >= 1 && S.c[c.id].i >= 3).length / cs.length : 0;
+  const cov = cs.length ? cs.reduce((a, c) => a + mastery(c), 0) / cs.length : 0;
+  const covF = Math.min(1, cov / 0.5);
   // 程度測驗每課得 2 題，所以 2 題已經計
   const r = S.stats.rc["L" + L] || "";
   const a = r.length >= 2 ? [...r].filter((x) => x === "1").length / r.length : null;
-  if (a == null) return srsM >= 0.3 ? srsM : null;
-  return 0.75 * a + 0.25 * Math.max(srsM, a);
+  if (a == null) return cov > 0 ? 0.8 * covF : null;
+  return a * (0.4 + 0.6 * covF);
 }
 // 由第1課數起，測過嘅課全部 ≥65% 先算穩固
 function masteredLesson() {
@@ -1728,7 +1732,7 @@ function masteredLesson() {
   return m;
 }
 function levelOf(m) {
-  if (!m) return { name: "未評估", sub: "做一次程度測驗就知" };
+  if (!m) return { name: "起步中", sub: "溫多啲、練多啲，程度就會慢慢升" };
   const n5 = Math.round((Math.min(m, 25) / 25) * 100);
   return { name: m <= 12 ? "N5 前段" : m <= 25 ? "N5 後段" : m <= 37 ? "N4 前段" : "N4 後段", sub: `穩固掌握到第${m}課 · N5 完成 ${n5}%` };
 }
@@ -1974,10 +1978,14 @@ function renderPractice() {
     const aloud = P.mode === "aloud" && R.cps && R.cps.length;
     if (snapshot()) save();
     if (P.mode === "test") {
-      const lv = levelOf(masteredLesson()), byL = {};
+      const byL = {};
       R.qs.forEach((q) => { if (q.ok == null) return; const b = byL[q.card.L] || (byL[q.card.L] = [0, 0]); b[1]++; if (q.ok) b[0]++; });
+      let est = 0;
+      for (const L of Object.keys(byL).map(Number).sort((a, b) => a - b)) { if (byL[L][0] / byL[L][1] >= 0.5) est = L; else break; }
+      if (!R.saved) { R.saved = true; S.game.test = { d: today(), L: est }; save(); }
+      const lv = { name: est ? `大致識到第${est}課` : "要由頭溫起", sub: "測驗估計只係參考；要溫習同練習，能力值同程度先會升" };
       el.innerHTML = `<div class="done">
-        <div class="level"><span class="muted">你而家嘅程度</span><b>${lv.name}</b><span>${lv.sub}</span></div>
+        <div class="level"><span class="muted">測驗估計</span><b>${lv.name}</b><span>${lv.sub}</span></div>
         <div class="chips test-res">${Object.entries(byL).map(([L, b]) => `<span class="pill" style="color:var(${GRADE(b[0] / b[1])[1]});border-color:currentColor">第${L}課 ${b[0]}/${b[1]}</span>`).join("")}</div>
         <p class="muted">答錯嘅課會喺「弱點練習」多出啲。每兩三個星期再測一次，睇吓有冇進步。</p>
         <div class="row" style="justify-content:center"><button class="btn primary" id="pStats">睇能力分析表</button><button class="btn ghost" id="pBack">返去練習</button></div></div>`;
@@ -2031,6 +2039,7 @@ function renderPractice() {
     rec(catKeys(q), ok);
     q.ok = ok;
     R.combo = ok ? (R.combo || 0) + 1 : 0;
+    if (q.k && ["read", "pick", "write", "mean"].includes(q.mode)) bumpKanji(q.k, ok);
     addXP(ok ? 5 + Math.max(0, R.combo - 2) : 1);
     if (ok) R.score++;
     else { markWeak(q.card); const w = wrongEntry(); R.wrong.push(w); logWrong(M, w.a, w.b); }
@@ -2272,7 +2281,7 @@ function renderBoss() {
   if (!BF) {
     const pr = predicted();
     el.innerHTML = `
-      <div class="level-card game"><div class="level"><span class="muted">預計程度</span><b>${esc(pr.name)}</b><span>${esc(pr.sub)}</span></div></div>
+      <div class="level-card game"><div class="level"><span class="muted">而家程度</span><b>${esc(pr.name)}</b><span>${esc(pr.sub)}</span></div></div>
       <p class="muted">每隻 Boss ${BOSS_Q} 題，你有 ${BOSS_HEARTS} 粒心。答啱 ${BOSS_HP} 題就打贏，打贏先解鎖下一隻。每兩三個星期再挑戰一次，睇吓自己去到邊。</p>
       <div class="boss-map">${BOSSES.map((b, i) => {
         const r = bossRec(b.id), open = bossUnlocked(i);
@@ -2340,6 +2349,7 @@ function renderBoss() {
     if (ok) { F.hits++; F.combo++; const x = 5 * (F.i + 1) + Math.max(0, F.combo - 2); F.xp += x; addXP(x); F.fx = "hit"; }
     else { F.hearts--; F.combo = 0; F.fx = "hurt"; if (q.card && !q.card.id.startsWith("x")) markWeak(q.card); logWrong("boss", q.q || q.k || q.pre + q.ans, q.zh || ""); }
     if (q.mode !== "bank") rec(catKeys(q), ok);
+    if (q.mode === "bank" ? q.kind !== "g" : q.k) bumpKanji(q.mode === "bank" ? q.q : q.k, ok);
     rec(["boss:" + b.id], ok);
     save(); renderBoss();
     if (S.settings.auto) speak(q.mode === "bank" ? (q.kind === "g" ? q.q.replace("（　）", q.ans) : q.kind === "r" ? q.ans : q.q) : sayOf(q));
@@ -2351,16 +2361,42 @@ function renderBoss() {
 }
 
 /* ===== 角色狀態（雷達圖） ===== */
-const STATS6 = [
-  { name: "語彙", keys: ["srs:v", "m:mean"] }, { name: "漢字", keys: ["m:read", "m:pick", "m:write"] },
-  { name: "文法", keys: ["srs:g"] }, { name: "助詞", keys: ["m:joshi"] },
-  { name: "變化", keys: ["m:verb"] }, { name: "閱讀", keys: ["read"] }
-];
-const RANK = (v) => (v == null ? "?" : v >= 90 ? "S" : v >= 80 ? "A" : v >= 65 ? "B" : v >= 50 ? "C" : v >= 30 ? "D" : "E");
+// 能力值：由 0 開始，靠學識嘅嘢慢慢儲；目標跟住下一隻未打贏嘅 Boss 升
+const RANK = (v) => (v == null ? "?" : v >= 99 ? "S" : v >= 80 ? "A" : v >= 60 ? "B" : v >= 40 ? "C" : v >= 20 ? "D" : "E");
+const TIER_MULT = [1, 2, 4, 7, 12];
+const STAT_BASE = { 語彙: 800, 漢字: 100, 文法: 120, 助詞: 150, 變化: 150, 閱讀: 150 };
+const goalTier = () => { let t = 0; BOSSES.forEach((b, i) => { if ((bossRec(b.id) || {}).cleared) t = i + 1; }); return Math.min(t, BOSSES.length - 1); };
+function mastery(c) {
+  const st = S.c[c.id];
+  if (!st) return 0;
+  return st.i >= 21 ? 1 : st.i >= 7 ? 0.75 : st.i >= 3 ? 0.5 : st.r >= 1 ? 0.25 : 0;
+}
+function bumpKanji(word, ok) {
+  const kj = S.stats.kj;
+  [...clean(word)].filter(hasKanji).forEach((ch) => { kj[ch] = Math.max(0, (kj[ch] || 0) + (ok ? 1 : -1)); });
+}
+function statPoints() {
+  let voc = 0, gram = 0;
+  const kset = new Set();
+  CARDS.forEach((c) => {
+    const m = mastery(c);
+    if (c.t === "v") { voc += m; if (m >= 0.75) [...clean(c.kanji)].filter(hasKanji).forEach((ch) => kset.add(ch)); }
+    else gram += m;
+  });
+  Object.entries(S.stats.kj).forEach(([ch, n]) => { if (n >= 3) kset.add(ch); });
+  const good = (k) => (S.stats.cat[k] ? S.stats.cat[k][0] : 0);
+  const accOr = (k) => { const a = rAcc(k); return a == null ? 0.5 : a; };
+  return {
+    語彙: [voc, "字"], 漢字: [kset.size, "字"], 文法: [gram, "項"],
+    助詞: [good("m:joshi") * accOr("m:joshi"), "題"], 變化: [good("m:verb") * accOr("m:verb"), "題"],
+    閱讀: [S.stats.read.length * Math.min(1, (readCps() || 0) / 3), "句"]
+  };
+}
 function stat6() {
-  return STATS6.map((s) => {
-    const vs = s.keys.map(dimScore).filter((v) => v != null);
-    return { name: s.name, v: vs.length ? Math.round((vs.reduce((a, b) => a + b, 0) / vs.length) * 99) : null };
+  const pts = statPoints(), mult = TIER_MULT[goalTier()];
+  return Object.keys(STAT_BASE).map((name) => {
+    const p = pts[name][0], tgt = Math.round(STAT_BASE[name] * mult);
+    return { name, v: Math.min(99, Math.floor((p / tgt) * 99)), pts: Math.floor(p), tgt, unit: pts[name][1] };
   });
 }
 function radarSvg(st) {
@@ -2385,8 +2421,9 @@ function statusWindow() {
     <div class="xpbar" title="升級仲差 ${hi - xp} EXP"><i style="width:${((xp - lo) / (hi - lo)) * 100}%"></i></div>
     <div class="muted" style="font-size:var(--step--1)">升 Lv.${lv + 1} 仲差 ${hi - xp} EXP</div>
     ${radarSvg(st)}
-    <div class="stat-grid">${st.map((s) => `<div><span>${s.name}</span><b class="game-font">${s.v == null ? "--" : s.v}</b><i class="rank r-${RANK(s.v)}">${RANK(s.v)}</i></div>`).join("")}</div>
-    <div class="status-foot"><span>預計程度：<b>${esc(pr.name)}</b></span><span class="badges">${BOSSES.map((b) => `<span class="${(bossRec(b.id) || {}).cleared ? "" : "dim"}" title="${b.id}">${b.emoji}</span>`).join("")}</span></div>
+    <div class="muted" style="font-size:var(--step--1)">能力值由 0 開始，學識一樣加一啲。而家目標：<b>${BOSSES[goalTier()].id}</b>（儲滿 99 就係 S）</div>
+    <div class="stat-grid">${st.map((s) => `<div><span>${s.name}</span><b class="game-font">${s.v}</b><i class="rank r-${RANK(s.v)}">${RANK(s.v)}</i><small>${s.pts}/${s.tgt} ${s.unit}</small></div>`).join("")}</div>
+    <div class="status-foot"><span>程度：<b>${esc(pr.name)}</b>${S.game.test ? `<br><small class="muted">測驗估計：${S.game.test.L ? `大致識到第${S.game.test.L}課` : "由頭溫起"}（${dayLabel(S.game.test.d)}）</small>` : ""}</span><span class="badges">${BOSSES.map((b) => `<span class="${(bossRec(b.id) || {}).cleared ? "" : "dim"}" title="${b.id}">${b.emoji}</span>`).join("")}</span></div>
     <div class="row"><button class="btn small primary" id="toBoss">挑戰 Boss</button><button class="btn small" id="doTest">做程度測驗</button></div>
   </section>`;
 }
@@ -2477,7 +2514,9 @@ function renderStats() {
     ? `你嘅記錄儲存咗喺你個 Claude 帳戶：由 ${dayLabel(days[0])} 開始，溫咗 ${days.length} 日，學過 ${Object.keys(S.c).length} 張卡。${stateRef ? (lastSync ? "啱啱同步咗。" : "已經同步。") : "（而家喺 claude.ai 以外打開，記錄暫時只喺呢部機。）"}`
     : "開始溫習之後，進度會儲存喺你個 Claude 帳戶，換手機都記得。";
   const dimRows = DIMS.map((d) => {
-    const v = dimScore(d.k), [g, col] = GRADE(v), pct = v == null ? null : Math.round(v * 100);
+    const n = d.k === "read" ? S.stats.read.length : (S.stats.rc[d.k] || "").length || (S.stats.cat[d.k] || [0, 0])[1];
+    const v = dimScore(d.k), pct = v == null ? null : Math.round(v * 100);
+    const [g, col] = n >= 10 ? GRADE(v) : [n ? `再做 ${10 - n} 題` : "未測", "--ink-soft"];
     const was = prev && prev[d.k] != null ? prev[d.k] : null, diff = pct != null && was != null ? pct - was : 0;
     const extra = d.k === "read" && readCps() != null ? `（每秒 ${readCps().toFixed(1)} 字）` : "";
     return `<tr><th scope="row">${d.name}<small>${extra}</small></th>
@@ -2490,11 +2529,11 @@ function renderStats() {
   const ability = `
     ${statusWindow()}
     <p class="memory">${esc(memory)}</p>
-    <h2>能力分析表</h2>
+    <h2>答啱率分析</h2>
     <div class="table-wrap"><table class="ability">
-      <thead><tr><th scope="col">能力</th><th scope="col"></th><th scope="col" class="num">分數</th><th scope="col">等級</th><th scope="col" class="num">對比上星期</th></tr></thead>
+      <thead><tr><th scope="col">能力</th><th scope="col"></th><th scope="col" class="num">答啱率</th><th scope="col">等級</th><th scope="col" class="num">對比上星期</th></tr></thead>
       <tbody>${dimRows}</tbody></table></div>
-    <p class="muted">分數用最近 30 題計。「未測」＝未做過嗰種練習。</p>
+    <p class="muted">答啱率用最近 30 題計，做夠 10 題先評級。答啱率高唔代表能力值高，要學得多先會升。</p>
     ${lastNote ? `<details class="recent"><summary>上次 Claude 分析（${dayLabel(lastNote.d)}）</summary><div class="ai-out">${esc(lastNote.t)}</div></details>` : ""}`;
   const analysis = `<h2>你嘅弱點</h2>
     ${weak.length ? `<div class="weaks">${weak.map((w) => `<div class="weak">
@@ -2633,7 +2672,7 @@ function go(v) {
 document.querySelectorAll("#tabs button").forEach((b) => (b.onclick = () => go(b.dataset.v)));
 function updateMeta() {
   const due = CARDS.filter((c) => inScope(c) && S.c[c.id] && S.c[c.id].d <= today()).length;
-  document.getElementById("meta").innerHTML = `<span class="game-font hud-lv">Lv.${playerLv()}</span> 預計 ${esc(predicted().name)} · ${due} 張到期`;
+  document.getElementById("meta").innerHTML = `<span class="game-font hud-lv">Lv.${playerLv()}</span> ${esc(predicted().name)} · ${due} 張到期`;
   document.body.classList.toggle("big", !!S.settings.big);
 }
 let toastT;
