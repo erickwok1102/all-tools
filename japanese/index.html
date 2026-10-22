@@ -217,21 +217,31 @@ body.big .opt { font-size: 1.6rem; }
 .rank { font-style: normal; font-family: "DotGothic16", var(--font-ui); font-weight: 700; width: 1.4em; text-align: center; border-radius: 3px; color: var(--sheet); background: var(--ink-soft); }
 .r-S { background: var(--shu); } .r-A { background: var(--yamabuki); } .r-B { background: var(--matcha); } .r-C { background: var(--ai); }
 .status-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-.badges { font-size: 1.4rem; letter-spacing: 4px; }
-.badges .dim { filter: grayscale(1); opacity: .35; }
+.badges { display: flex; gap: 6px; }
+.badges [data-dim] { opacity: .35; }
 .level-card.game { border: 2px solid var(--ink); }
 .boss-map { display: grid; gap: 10px; position: relative; }
 .boss-node { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 8px; background: var(--sheet); }
 .boss-node.cleared { border-color: var(--matcha); }
 .boss-node.locked { opacity: .55; border-style: dashed; }
-.boss-emoji { font-size: 2.4rem; line-height: 1; }
+.boss-emoji { position: relative; line-height: 0; }
+.boss-emoji .lock { position: absolute; right: -4px; bottom: -4px; font-size: 1rem; line-height: 1; font-style: normal; }
+.sprite { image-rendering: pixelated; display: block; }
 .boss-info { display: grid; gap: 2px; font-size: var(--step--1); }
 .boss-info b { font-size: var(--step-1); }
 .arena { border: 2px solid var(--ink); border-radius: 8px; padding: 12px 14px; background: var(--sheet); display: grid; gap: 6px; }
 .boss-head { display: flex; justify-content: space-between; align-items: baseline; }
 .hp { height: 12px; border: 1px solid var(--ink); border-radius: 2px; overflow: hidden; background: var(--paper); }
 .hp i { display: block; height: 100%; background: var(--shu); transition: width .3s; }
-.boss-big { font-size: 4.5rem; text-align: center; line-height: 1.2; position: relative; }
+.boss-big { text-align: center; line-height: 0; position: relative; }
+.boss-big canvas { width: 100%; max-width: 320px; height: auto; image-rendering: pixelated; }
+.boss-intro { display: grid; gap: 12px; justify-items: center; }
+.appear { font-size: 1.6rem; color: var(--shu); letter-spacing: 0.1em; animation: pop2 .5s ease-out; }
+.speech { position: relative; display: grid; gap: 2px; width: 100%; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 10px; background: var(--sheet); text-align: left; }
+.speech::before { content: ""; position: absolute; top: -10px; left: 50%; margin-left: -8px; border: 8px solid transparent; border-top: 0; border-bottom: 10px solid var(--ink); }
+.speech .jp { font-family: var(--font-jp); font-size: var(--step-1); font-weight: 600; }
+.speech small { color: var(--ink-soft); }
+.speech .icon-btn { justify-self: end; }
 .dmg { position: absolute; left: 58%; top: 0; font-size: 1.6rem; color: var(--shu); animation: rise .8s ease-out forwards; }
 @keyframes rise { from { transform: translateY(10px); opacity: 1; } to { transform: translateY(-24px); opacity: 0; } }
 .arena.hit .boss-big { animation: shake .35s; }
@@ -2410,7 +2420,7 @@ function startBoss(i) {
     P.all = false;
     qs = shuffle(qs.concat(pickN(b.bank, BOSS_Q - qs.length).map((it) => bankQ(b, it))));
   } else qs = pickN(b.bank, BOSS_Q).map((it) => bankQ(b, it));
-  BF = { i, b, qs, n: 0, hits: 0, hearts: BOSS_HEARTS, picked: null, fx: "", combo: 0, xp: 0 };
+  BF = { i, b, qs, n: 0, hits: 0, hearts: BOSS_HEARTS, picked: null, fx: "", combo: 0, xp: 0, intro: true };
   go("boss");
 }
 function bossQuestion(q) {
@@ -2435,13 +2445,14 @@ function renderBoss() {
         const r = bossRec(b.id), open = bossUnlocked(i);
         const ago = r && r.last != null ? today() - r.last : null;
         return `<div class="boss-node ${r && r.cleared ? "cleared" : ""} ${open ? "" : "locked"}">
-          <span class="boss-emoji" aria-hidden="true">${open ? b.emoji : "🔒"}</span>
+          <span class="boss-emoji">${miniSprite(b.id, 48, !open)}${open ? "" : `<i class="lock" aria-hidden="true">🔒</i>`}</span>
           <div class="boss-info"><b class="game-font">${b.id} · ${esc(b.name)}</b><span>${esc(b.desc)}</span>
             <span class="muted">${r ? `${r.cleared ? "已討伐 ✓ · " : ""}最好成績 ${r.best}/${BOSS_Q} · 挑戰 ${r.tries} 次${ago != null ? ` · ${ago ? ago + " 日前" : "今日"}` : ""}` : open ? "未挑戰" : `打贏 ${BOSSES[i - 1].id} 先解鎖`}</span></div>
           ${open ? `<button class="btn ${r && r.cleared ? "" : "primary"} small" data-boss="${i}">${r ? "再挑戰" : "挑戰"}</button>` : ""}
         </div>`;
       }).join("")}</div>`;
     el.querySelectorAll("[data-boss]").forEach((b) => (b.onclick = () => startBoss(+b.dataset.boss)));
+    paintMinis(el);
     return;
   }
   const F = BF, b = F.b;
@@ -2451,11 +2462,27 @@ function renderBoss() {
   const arena = `<div class="arena ${F.fx}">
       <div class="boss-head"><b class="game-font">${b.id} · ${esc(b.name)}</b><span class="muted">HP ${BOSS_HP - F.hits}/${BOSS_HP}</span></div>
       <div class="hp"><i style="width:${hpPct}%"></i></div>
-      <div class="boss-big" aria-hidden="true">${b.emoji}${F.fx === "hit" ? `<span class="dmg game-font">-1</span>` : ""}</div>
+      <div class="boss-big"><canvas id="arenaCv" width="260" height="190" role="img" aria-label="${esc(b.name)}"></canvas>${F.fx === "hit" ? `<span class="dmg game-font">-1</span>` : ""}</div>
       <div class="hearts" aria-label="剩 ${F.hearts} 粒心">${hearts}${F.combo >= 2 ? `<span class="combo game-font">🔥${F.combo} COMBO</span>` : ""}</div>
     </div>`;
+  const wire = () => {
+    runArena(document.getElementById("arenaCv"), F);
+    el.querySelectorAll("[data-line]").forEach((x) => (x.onclick = () => speak(x.dataset.line)));
+  };
+  if (F.intro) {
+    el.innerHTML = `${arena}
+      <div class="boss-intro"><span class="game-font appear">BOSS 出現！</span>${speechHtml(b.id, "intro")}
+      <button class="btn primary big-btn" id="bFight">開戰！</button>
+      <button class="btn ghost small" id="bQuit">逃走</button></div>`;
+    wire();
+    if (S.settings.auto) speak(LINES[b.id].intro[0]);
+    document.getElementById("bFight").onclick = () => { F.intro = false; renderBoss(); };
+    document.getElementById("bQuit").onclick = () => { BF = null; renderBoss(); };
+    return;
+  }
   if (over) {
     const win = F.hits >= BOSS_HP;
+    if (win && !F.dead) { F.dead = true; F.deadAt = performance.now(); }
     if (!F.done) {
       F.done = true;
       const r = S.game.boss[b.id] || (S.game.boss[b.id] = { best: 0, cleared: false, tries: 0, last: null });
@@ -2469,12 +2496,15 @@ function renderBoss() {
     el.innerHTML = `${arena}
       <div class="done">
         <div class="stamp game-font" style="${win ? "" : "color:var(--ink-soft);border-color:var(--ink-soft)"}">${win ? "討伐" : "敗北"}</div>
+        ${speechHtml(b.id, win ? "win" : "lose")}
         <h2>${win ? `打贏 ${b.id} ${esc(b.name)}！` : `${esc(b.name)} 仲未倒……`}</h2>
         <p>答啱 ${F.hits}/${F.n} 題 · 得到 <b>${F.xp + (F.bonus || 0)} EXP</b>${F.first ? " · 首次討伐獎勵" : ""}</p>
         ${win && BOSSES[F.i + 1] ? `<p class="muted">解鎖咗 ${BOSSES[F.i + 1].id} ${esc(BOSSES[F.i + 1].name)}！</p>` : ""}
         ${!win ? `<p class="muted">答錯嘅題目已經放入溫習。練多啲再嚟過！</p>` : ""}
         <div class="row" style="justify-content:center"><button class="btn primary" id="bAgain">再挑戰</button><button class="btn" id="bMap">返 Boss 地圖</button></div>
       </div>`;
+    wire();
+    if (!F.saidEnd && S.settings.auto) { F.saidEnd = true; speak(LINES[b.id][win ? "win" : "lose"][0]); }
     document.getElementById("bAgain").onclick = () => startBoss(F.i);
     document.getElementById("bMap").onclick = () => { BF = null; renderBoss(); };
     return;
@@ -2495,7 +2525,7 @@ function renderBoss() {
     F.picked = q.opts[+btn.dataset.o];
     const ok = F.picked === q.ans;
     tick();
-    if (ok) { F.hits++; F.combo++; S.game.maxCombo = Math.max(S.game.maxCombo, F.combo); const x = 5 * (F.i + 1) + Math.max(0, F.combo - 2); F.xp += x; addXP(x); F.fx = "hit"; }
+    if (ok) { F.hits++; F.combo++; S.game.maxCombo = Math.max(S.game.maxCombo, F.combo); const x = 5 * (F.i + 1) + Math.max(0, F.combo - 2); F.xp += x; addXP(x); F.fx = "hit"; F.hitAt = performance.now(); }
     else { F.hearts--; F.combo = 0; F.fx = "hurt"; if (q.card && !q.card.id.startsWith("x")) markWeak(q.card); logWrong("boss", q.q || q.k || q.pre + q.ans, q.zh || ""); }
     if (q.mode !== "bank") rec(catKeys(q), ok);
     if (q.mode === "bank" ? q.kind !== "g" : q.k) bumpKanji(q.mode === "bank" ? q.q : q.k, ok);
@@ -2503,11 +2533,115 @@ function renderBoss() {
     save(); renderBoss();
     if (S.settings.auto) speak(q.mode === "bank" ? (q.kind === "g" ? q.q.replace("（　）", q.ans) : q.kind === "r" ? q.ans : q.q) : sayOf(q));
   }));
+  wire();
   const nx = document.getElementById("bNext");
   if (nx) { nx.onclick = () => { F.n++; F.picked = null; F.fx = ""; renderBoss(); }; nx.focus(); }
   const say = document.getElementById("bSay"); if (say) say.onclick = () => speak(q.mode === "bank" ? (q.kind === "r" ? q.ans : q.q.replace("（　）", q.ans)) : sayOf(q));
   document.getElementById("bQuit").onclick = () => { BF = null; renderBoss(); };
 }
+
+/* ===== Boss 像素圖同動畫 ===== */
+const PAL = { K: "#1b1b2a", O: "#f28c28", W: "#fff6e9", R: "#d7263d", r: "#8c1525", Y: "#ffd23f", G: "#5bba6f", g: "#2d6a4f", B: "#4361ee", b: "#2b2d9e", P: "#9b5de5", p: "#5a189a" };
+const SPRITES = {
+  N5: [ // 狐
+    ".K............K.", "KOK..........KOK", "KOOK........KOOK", "KOWOKKKKKKKKOWOK",
+    "KOOOOOOOOOOOOOOK", "KOOOOOOOOOOOOOOK", "KORRYKOOOOKYRROK", "KOOOOOOOOOOOOOOK",
+    "KWWOOOOOOOOOOWWK", ".KWWWWWWWWWWWWK.", ".KWWWWWKKWWWWWK.", "..KWWWWWWWWWWK..",
+    "...KWWRRRRWWK...", "....KWWWWWWK....", ".....KKKKKK.....", "................"
+  ],
+  N4: [ // 天狗
+    "................", "......KKKK......", ".....KKKKKK.....", "...KKKKKKKKKK...",
+    "..KRRRRRRRRRRK..", ".KRKKKRRRRKKKRK.", ".KRRWKRRRRKWRRK.", ".KRRRRRrrRRRRRK.",
+    ".KRRRRRrrRRRRRK.", ".KRRRRRrrRRRRRK.", ".KRRRRRrrRRRRRK.", ".KRRRRKrrKRRRRK.",
+    "..KRRRKKKKRRRK..", "..KWWWWWWWWWWK..", "...KWWWWWWWWK...", "....KKKKKKKK...."
+  ],
+  N3: [ // 大蛇
+    "................", ".....KKKKKK.....", "...KKGGGGGGKK...", "..KGGGGGGGGGGK..",
+    ".KGGYKGGGGKYGGK.", ".KGGGGGGGGGGGGK.", ".KGgGgGgGgGgGGK.", "..KGGGGGGGGGGK..",
+    "...KKGGGGGGKK...", ".....KGRRGK.....", "......KRRK......", ".....KR..RK.....",
+    "....KGGK........", "...KGgGGK..KK...", "..KGGGgGGKKGGK..", "..KKKKKKKKKKKK.."
+  ],
+  N2: [ // 竜王
+    ".Y............Y.", ".YY..........YY.", "..YY........YY..", "...KKKKKKKKKK...",
+    "..KBBBBBBBBBBK..", ".KBBRKBBBBKRBBK.", ".KBBBBBBBBBBBBK.", "KBBbBBBBBBBBbBBK",
+    "KBBBBBBBBBBBBBBK", ".KBBWBBBBBBWBBK.", ".KBKKBBBBBBKKBK.", "Y.KBWWWWWWWWBK.Y",
+    "YY.KBBBBBBBBK.YY", ".Y..KBBBBBBK..Y.", ".....KKKKKK.....", "................"
+  ],
+  N1: [ // 鬼神
+    "..W..........W..", "..WW........WW..", "..KWK.KKKK.KWK..", ".KKKKKKKKKKKKKK.",
+    "KKPPPPPPPPPPPPKK", "KPPKKPPPPPPKKPPK", "KPPYKPPPPPPKYPPK", "KPPPPPPPPPPPPPPK",
+    "KPPPPPPppPPPPPPK", "KPPKKKKKKKKKKPPK", "KPPKWKRRRRKWKPPK", "KPPKRRRRRRRRRKPPK".slice(0, 16),
+    ".KPPKKKKKKKKPPK.", "..KPPPPPPPPPPK..", "...KKKKKKKKKK...", "................"
+  ]
+};
+const AURA = { N5: "#4cc9f0", N4: "#9ad1a0", N3: "#b388eb", N2: "#ffd23f", N1: "#ff5d5d" };
+// 對白：[日文, 中文]
+const LINES = {
+  N5: { intro: ["わたしは きつねです。日本語の テストを はじめましょう！", "我係狐狸。開始日文測驗啦！"], win: ["まいりました……！", "我服咗……！"], lose: ["また 来て くださいね〜", "下次再嚟啦～"] },
+  N4: { intro: ["人間よ、わたしの 質問に 答えられるか？", "人類，你答唔答得到我嘅問題？"], win: ["見事だ……。", "好嘢……。"], lose: ["修行が 足りないぞ！", "修行未夠呀！"] },
+  N3: { intro: ["八つの 頭が お前を 待って いたのだ。", "我八個頭一直等緊你。"], win: ["ば、ばかな……！", "點、點會咁……！"], lose: ["出直して こい！", "返去練好先再嚟！"] },
+  N2: { intro: ["この 竜王に 挑む とは、なかなか 勇気が あるな。", "竟然敢挑戰竜王，幾有膽色喎。"], win: ["お前こそ 真の 勇者だ。", "你先係真正嘅勇者。"], lose: ["まだまだ だな。", "仲差好遠。"] },
+  N1: { intro: ["よくぞ ここまで 来た。だが、ここで 終わりだ！", "你竟然去到咁遠。不過到此為止！"], win: ["……完敗だ。日本語の 達人よ。", "……我輸得心服口服。日文達人。"], lose: ["百年 早い！", "你早咗一百年！"] }
+};
+const reduceMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function paintSprite(ctx, rows, x0, y0, px, mono) {
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === ".") return;
+    ctx.fillStyle = mono || PAL[ch];
+    ctx.fillRect(Math.round(x0 + x * px), Math.round(y0 + y * px), Math.ceil(px), Math.ceil(px));
+  }));
+}
+const miniSprite = (id, size, dim) => `<canvas class="sprite" data-sprite="${id}" ${dim ? 'data-dim="1"' : ""} width="${size}" height="${size}" aria-hidden="true"></canvas>`;
+function paintMinis(root) {
+  const grey = getComputedStyle(document.body).getPropertyValue("--ink-soft").trim() || "#888";
+  root.querySelectorAll("canvas[data-sprite]").forEach((cv) => {
+    const ctx = cv.getContext("2d");
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    paintSprite(ctx, SPRITES[cv.dataset.sprite], 0, 0, cv.width / 16, cv.dataset.dim ? grey : null);
+  });
+}
+let arenaAnim = 0;
+function runArena(cv, F) {
+  cancelAnimationFrame(arenaAnim);
+  if (!cv) return;
+  const ctx = cv.getContext("2d"), id = F.b.id, W = cv.width, H = cv.height, px = 9, sw = 16 * px;
+  const stage = getComputedStyle(document.body).getPropertyValue("--ai-wash").trim() || "#e3e9f6";
+  const still = reduceMotion(), t0 = performance.now();
+  const frame = (now) => {
+    if (!cv.isConnected) return;
+    const t = (now - t0) / 1000;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = stage;
+    ctx.beginPath(); ctx.ellipse(W / 2, H - 16, 86, 13, 0, 0, Math.PI * 2); ctx.fill();
+    const angry = !F.dead && F.hits >= BOSS_HP * 0.6;
+    let x = (W - sw) / 2, y = 14 + (still ? 0 : Math.sin(t * (angry ? 7 : 3)) * 5);
+    const hitAge = F.hitAt ? now - F.hitAt : 1e9;
+    if (!still && hitAge < 300) x += Math.sin(hitAge / 18) * 7;
+    if (!still && !F.dead) {
+      ctx.fillStyle = AURA[id];
+      for (let i = 0; i < 6; i++) {
+        const a = t * (angry ? 2.6 : 1.4) + (i * Math.PI) / 3;
+        ctx.globalAlpha = 0.45 + 0.35 * Math.sin(t * 3 + i);
+        ctx.fillRect(W / 2 + Math.cos(a) * 104 - 4, 86 + Math.sin(a) * 46 - 4, 8, 8);
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (F.dead) {
+      const k = Math.min(1, (now - F.deadAt) / 1100);
+      ctx.globalAlpha = 1 - k; y += k * 40;
+    }
+    paintSprite(ctx, SPRITES[id], x, y, px, hitAge < 110 ? "#ffffff" : null);
+    if (angry && !still) { ctx.globalAlpha = 0.18 + 0.14 * Math.sin(t * 9); paintSprite(ctx, SPRITES[id], x, y, px, "#ff2a2a"); }
+    ctx.globalAlpha = 1;
+    const settling = F.dead ? now - F.deadAt < 1200 : true;
+    if (!still && settling) arenaAnim = requestAnimationFrame(frame);
+  };
+  arenaAnim = requestAnimationFrame(frame);
+}
+const speechHtml = (id, kind) => {
+  const [jp, zh] = LINES[id][kind];
+  return `<div class="speech"><span class="jp">${esc(jp)}</span><small>${esc(zh)}</small>${canSpeak ? `<button class="icon-btn" data-line="${esc(jp)}">聽</button>` : ""}</div>`;
+};
 
 /* ===== 角色狀態（雷達圖） ===== */
 // 能力值：由 0 開始，靠學識嘅嘢慢慢儲；目標跟住下一隻未打贏嘅 Boss 升
@@ -2572,7 +2706,7 @@ function statusWindow() {
     ${radarSvg(st)}
     <div class="muted" style="font-size:var(--step--1)">能力值由 0 開始，學識一樣加一啲。而家目標：<b>${BOSSES[goalTier()].id}</b>（儲滿 99 就係 S）</div>
     <div class="stat-grid">${st.map((s) => `<div><span>${s.name}</span><b class="game-font">${s.v}</b><i class="rank r-${RANK(s.v)}">${RANK(s.v)}</i><small>${s.pts}/${s.tgt} ${s.unit}</small></div>`).join("")}</div>
-    <div class="status-foot"><span>程度：<b>${esc(pr.name)}</b>${S.game.test ? `<br><small class="muted">測驗估計：${S.game.test.L ? `大致識到第${S.game.test.L}課` : "由頭溫起"}（${dayLabel(S.game.test.d)}）</small>` : ""}</span><span class="badges">${BOSSES.map((b) => `<span class="${(bossRec(b.id) || {}).cleared ? "" : "dim"}" title="${b.id}">${b.emoji}</span>`).join("")}</span></div>
+    <div class="status-foot"><span>程度：<b>${esc(pr.name)}</b>${S.game.test ? `<br><small class="muted">測驗估計：${S.game.test.L ? `大致識到第${S.game.test.L}課` : "由頭溫起"}（${dayLabel(S.game.test.d)}）</small>` : ""}</span><span class="badges">${BOSSES.map((b) => `<span title="${b.id} ${esc(b.name)}">${miniSprite(b.id, 32, !(bossRec(b.id) || {}).cleared)}</span>`).join("")}</span></div>
     <div class="row"><button class="btn small primary" id="toBoss">挑戰 Boss</button><button class="btn small" id="doTest">做程度測驗</button></div>
   </section>`;
 }
@@ -2714,6 +2848,7 @@ function renderStats() {
   }));
   document.getElementById("doTest").onclick = () => { P.mode = "test"; startRun(); go("practice"); };
   document.getElementById("toBoss").onclick = () => go("boss");
+  paintMinis(el);
   const an = document.getElementById("aiAnalyse");
   if (an) an.onclick = async () => {
     const cats = Object.entries(S.stats.cat).filter(([k]) => catName(k)).map(([k, v]) => `${catName(k)}：${v[0]}/${v[1]}`).join("；");
