@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Klee+One:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <style>
 /* Layout: one narrow study column; a genkō-yōshi (原稿用紙) card is the hero, tabs sit in a sticky header. */
 :root {
@@ -187,6 +187,59 @@ body.big .opt { font-size: 1.6rem; }
 .zh-opts .opt { font-family: var(--font-ui); font-size: var(--step-1); }
 .test-res { justify-content: center; }
 
+/* Game */
+.game-font { font-family: "DotGothic16", var(--font-ui); letter-spacing: 0.02em; }
+.hud-lv { color: var(--ai); font-weight: 700; }
+.combo { color: var(--shu); font-size: var(--step--1); }
+.lvup { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 30; display: grid; justify-items: center; gap: 4px;
+  padding: 18px 28px; border-radius: 8px; background: var(--ink); color: var(--paper); box-shadow: 0 10px 40px rgba(0,0,0,.25); animation: pop .5s ease-out; }
+.lvup b { font-size: 2rem; color: var(--yamabuki); white-space: nowrap; }
+.lvup span { white-space: nowrap; }
+@keyframes pop { from { transform: translate(-50%, -50%) scale(.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+.status { border: 2px solid var(--ink); border-radius: 8px; padding: 14px 16px; background: var(--sheet); display: grid; gap: 8px; box-shadow: 4px 4px 0 var(--ai-wash); }
+.status-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.status-lv { font-size: 1.8rem; color: var(--ai); }
+.status-title { font-weight: 700; }
+.xpbar { height: 10px; border: 1px solid var(--ink); border-radius: 2px; overflow: hidden; background: var(--paper); }
+.xpbar i { display: block; height: 100%; background: var(--yamabuki); }
+.radar { width: 100%; max-width: 320px; justify-self: center; overflow: visible; }
+.r-ring { fill: none; stroke: var(--rule); stroke-width: 1; }
+.r-axis { stroke: var(--rule); stroke-width: 1; }
+.r-val { fill: color-mix(in srgb, var(--ai) 28%, transparent); stroke: var(--ai); stroke-width: 2; stroke-linejoin: round; }
+.r-lab { fill: var(--ink); font-size: 12px; font-family: var(--font-ui); font-weight: 600; }
+.r-rank { fill: var(--shu); font-family: "DotGothic16", var(--font-ui); }
+.stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.stat-grid div { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 4px; }
+.stat-grid span { font-size: var(--step--1); color: var(--ink-soft); }
+.stat-grid b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.rank { font-style: normal; font-family: "DotGothic16", var(--font-ui); font-weight: 700; width: 1.4em; text-align: center; border-radius: 3px; color: var(--sheet); background: var(--ink-soft); }
+.r-S { background: var(--shu); } .r-A { background: var(--yamabuki); } .r-B { background: var(--matcha); } .r-C { background: var(--ai); }
+.status-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.badges { font-size: 1.4rem; letter-spacing: 4px; }
+.badges .dim { filter: grayscale(1); opacity: .35; }
+.level-card.game { border: 2px solid var(--ink); }
+.boss-map { display: grid; gap: 10px; position: relative; }
+.boss-node { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 8px; background: var(--sheet); }
+.boss-node.cleared { border-color: var(--matcha); }
+.boss-node.locked { opacity: .55; border-style: dashed; }
+.boss-emoji { font-size: 2.4rem; line-height: 1; }
+.boss-info { display: grid; gap: 2px; font-size: var(--step--1); }
+.boss-info b { font-size: var(--step-1); }
+.arena { border: 2px solid var(--ink); border-radius: 8px; padding: 12px 14px; background: var(--sheet); display: grid; gap: 6px; }
+.boss-head { display: flex; justify-content: space-between; align-items: baseline; }
+.hp { height: 12px; border: 1px solid var(--ink); border-radius: 2px; overflow: hidden; background: var(--paper); }
+.hp i { display: block; height: 100%; background: var(--shu); transition: width .3s; }
+.boss-big { font-size: 4.5rem; text-align: center; line-height: 1.2; position: relative; }
+.dmg { position: absolute; left: 58%; top: 0; font-size: 1.6rem; color: var(--shu); animation: rise .8s ease-out forwards; }
+@keyframes rise { from { transform: translateY(10px); opacity: 1; } to { transform: translateY(-24px); opacity: 0; } }
+.arena.hit .boss-big { animation: shake .35s; }
+.arena.hurt { animation: flash .4s; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+@keyframes flash { 0% { background: color-mix(in srgb, var(--shu) 35%, var(--sheet)); } 100% { background: var(--sheet); } }
+.hearts { display: flex; gap: 4px; align-items: center; color: var(--shu); font-size: 1.3rem; }
+.hearts .lost { color: var(--rule); }
+.hearts .combo { margin-left: auto; }
+
 /* Lists */
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chips button {
@@ -247,7 +300,7 @@ h2 { font-size: var(--step-1); margin: 4px 0 0; text-wrap: balance; }
   .list li .m { grid-column: 2 / 3; grid-row: 2; }
   .form .two { grid-template-columns: 1fr; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
 <div class="wrap">
@@ -259,15 +312,17 @@ h2 { font-size: var(--step-1); margin: 4px 0 0; text-wrap: balance; }
     <nav role="tablist" id="tabs">
       <button role="tab" data-v="today" aria-selected="true">今日溫習</button>
       <button role="tab" data-v="practice" aria-selected="false">練習</button>
+      <button role="tab" data-v="boss" aria-selected="false">BOSS</button>
       <button role="tab" data-v="vocab" aria-selected="false">生字</button>
       <button role="tab" data-v="grammar" aria-selected="false">文法</button>
-      <button role="tab" data-v="stats" aria-selected="false">進度</button>
+      <button role="tab" data-v="stats" aria-selected="false">能力</button>
       <button role="tab" data-v="setup" aria-selected="false">設定</button>
     </nav>
   </header>
   <main>
     <section class="view" id="v-today"></section>
     <section class="view" id="v-practice" hidden></section>
+    <section class="view" id="v-boss" hidden></section>
     <section class="view" id="v-vocab" hidden></section>
     <section class="view" id="v-grammar" hidden></section>
     <section class="view" id="v-stats" hidden></section>
@@ -275,6 +330,7 @@ h2 { font-size: var(--step-1); margin: 4px 0 0; text-wrap: balance; }
   </main>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="lvup game-font" id="lvup" hidden></div>
 
 <script>
 /* ===== 教材資料：みんなの日本語 初級I 第1–16課（核心生字＋文法） =====
@@ -1203,7 +1259,7 @@ const maxLesson = () => Math.max(16, ...CARDS.map((c) => c.L || 0));
 const LS_KEY = "minna-fukushu-v1";
 const today = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
 function freshState() {
-  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true, big: false, auto: true }, c: {}, log: {}, nt: { d: 0, n: 0 }, stats: { cat: {}, rc: {}, wrong: [], read: [] }, hist: {}, notes: [], upd: 0 };
+  return { settings: { cur: 16, newPerDay: 15, dir: "jz", gram: true, big: false, auto: true }, c: {}, log: {}, nt: { d: 0, n: 0 }, stats: { cat: {}, rc: {}, wrong: [], read: [] }, hist: {}, notes: [], game: { xp: 0, boss: {} }, upd: 0 };
 }
 function normalize(s) {
   const f = freshState();
@@ -1212,7 +1268,7 @@ function normalize(s) {
     settings: Object.assign(f.settings, s.settings || {}),
     c: s.c || {}, log: s.log || {}, nt: s.nt || f.nt, upd: s.upd || 0,
     stats: Object.assign(f.stats, s.stats || {}),
-    hist: s.hist || {}, notes: s.notes || []
+    hist: s.hist || {}, notes: s.notes || [], game: Object.assign(f.game, s.game || {})
   };
 }
 let S = freshState();
@@ -1389,6 +1445,7 @@ function answer(c, g) {
   }
   S.log[today()] = (S.log[today()] || 0) + 1;
   rec(["srs:" + c.t, "L" + c.L], g >= 2);
+  addXP(g >= 2 ? 2 : 1);
   if (g === 0) logWrong("srs", jpOf(c), c.mean);
   s.done++; s.i++; s.shown = false;
   save(); renderToday();
@@ -1458,7 +1515,7 @@ const clean = (s) => String(s || "").replace(/\[.*?\]|［.*?］/g, "").replace(/
 const hasKanji = (s) => /[一-鿿]/.test(s);
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const pickN = (a, n) => shuffle(a).slice(0, n);
-const inRange = (c) => (P.range ? c.L === P.range : c.L <= S.settings.cur);
+const inRange = (c) => (P.all ? true : P.range ? c.L === P.range : c.L <= S.settings.cur);
 
 function kanjiPool() {
   const seen = new Set(), out = [];
@@ -1957,7 +2014,7 @@ function renderPractice() {
   }
   const selfGrade = done && (M === "write" || M === "aloud");
   el.innerHTML = `
-    <div class="progress"><span>${P.mode === "weak" ? "弱點 · " : ""}${modeName(M)}</span><div class="bar"><i style="width:${(R.i / R.qs.length) * 100}%"></i></div><span>${R.i + 1}/${R.qs.length}</span></div>
+    <div class="progress"><span>${P.mode === "weak" ? "弱點 · " : ""}${modeName(M)}${R.combo >= 2 ? ` <b class="combo game-font">🔥${R.combo}</b>` : ""}</span><div class="bar"><i style="width:${(R.i / R.qs.length) * 100}%"></i></div><span>${R.i + 1}/${R.qs.length}</span></div>
     <div class="card practice"><div class="face">${questionHtml(q)}</div></div>
     ${body}
     ${done && !selfGrade ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "啱！" : P.typing && M === "verb" ? `你寫：${esc(R.picked)}` : "唔啱"}</b>${feedbackHtml(q)}</div>` : ""}
@@ -1973,6 +2030,8 @@ function renderPractice() {
   const settle = (ok) => {
     rec(catKeys(q), ok);
     q.ok = ok;
+    R.combo = ok ? (R.combo || 0) + 1 : 0;
+    addXP(ok ? 5 + Math.max(0, R.combo - 2) : 1);
     if (ok) R.score++;
     else { markWeak(q.card); const w = wrongEntry(); R.wrong.push(w); logWrong(M, w.a, w.b); }
     save();
@@ -2042,6 +2101,294 @@ async function askClaude(prompt, slot, btn) {
   }
   if (btn) btn.disabled = false;
   return text;
+}
+
+/* ===== 遊戲：經驗值、等級、BOSS ===== */
+const TITLES = [[1, "見習生"], [3, "冒險者"], [6, "戰士"], [10, "騎士"], [15, "勇者"], [20, "傳說"]];
+const playerLv = () => Math.floor(Math.sqrt(S.game.xp / 25)) + 1;
+const lvXP = (lv) => 25 * (lv - 1) * (lv - 1);
+const titleOf = (lv) => TITLES.filter(([n]) => lv >= n).pop()[1];
+function addXP(n) {
+  const before = playerLv();
+  S.game.xp += n;
+  const after = playerLv();
+  if (after > before) levelUp(after);
+  updateMeta();
+}
+function levelUp(lv) {
+  const t = document.getElementById("lvup");
+  t.innerHTML = `<b>LEVEL UP!</b><span>Lv.${lv} ${titleOf(lv)}</span>`;
+  t.hidden = false;
+  clearTimeout(levelUp.t);
+  levelUp.t = setTimeout(() => (t.hidden = true), 2600);
+}
+
+// 題庫：[類型, 題目, 答案, [錯誤選項×3], 中文]；r＝讀音，m＝意思，g＝文法填空
+const BOSSES = [
+  { id: "N5", name: "狐の門番", emoji: "🦊", desc: "守住日文入口嘅狐狸。學完初級 I 就打得贏。", bank: [
+    ["g", "日本へ 行った ことが（　）。", "あります", ["います", "します", "なります"], "我去過日本。"],
+    ["g", "休みの日は 本を 読んだり、映画を 見（　）します。", "たり", ["て", "ても", "たら"], "假日睇吓書、睇吓戲。"],
+    ["g", "あしたは 雨が 降ると（　）。", "思います", ["見ます", "聞きます", "会います"], "我諗聽日會落雨。"],
+    ["g", "雨が 降っ（　）、出かけます。", "ても", ["たら", "てから", "たり"], "就算落雨，我都會出街。"],
+    ["g", "駅に 着い（　）、電話して ください。", "たら", ["ても", "たり", "ながら"], "到咗車站就打電話俾我。"],
+    ["g", "寝る（　）、歯を みがきます。", "まえに", ["あとで", "ながら", "から"], "瞓覺之前刷牙。"],
+    ["g", "音楽を 聞き（　）、勉強します。", "ながら", ["たり", "ても", "まえに"], "一邊聽音樂一邊溫書。"],
+    ["r", "天気", "てんき", ["でんき", "てんぎ", "てんけ"], "天氣"],
+    ["r", "自転車", "じてんしゃ", ["じでんしゃ", "じてんじゃ", "してんしゃ"], "單車"],
+    ["r", "先週", "せんしゅう", ["せんしゅ", "ぜんしゅう", "せんしょう"], "上個星期"],
+    ["r", "午前", "ごぜん", ["ごせん", "こぜん", "ごぜい"], "上晝"],
+    ["m", "忙しい", "忙", ["悶", "痛", "攰"], ""],
+    ["m", "便利", "方便", ["便宜", "有用", "簡單"], ""]
+  ] },
+  { id: "N4", name: "天狗", emoji: "👺", desc: "識飛嘅天狗，考被動、使役、條件句。", bank: [
+    ["g", "日本語が 話せる ように（　）。", "なりました", ["しました", "いました", "ありました"], "我開始識講日文喇。"],
+    ["g", "毎日 野菜を 食べる ように（　）います。", "して", ["なって", "あって", "いて"], "我盡量每日都食菜。"],
+    ["g", "この 本は 字が 大きくて、読み（　）です。", "やすい", ["にくい", "たい", "そう"], "呢本書字大，好易讀。"],
+    ["g", "先生に 名前を 呼ば（　）。", "れました", ["せました", "りました", "させました"], "我俾老師叫咗個名。"],
+    ["g", "母は わたしに 野菜を 食べ（　）。", "させました", ["られました", "ました", "ています"], "媽媽叫我食菜（要我食）。"],
+    ["g", "空が 暗いです。雨が 降り（　）です。", "そう", ["よう", "らしい", "みたい"], "天好黑，睇落快要落雨。"],
+    ["g", "窓が 開けて（　）。", "あります", ["います", "おきます", "しまいます"], "窗已經（有人）打開咗。"],
+    ["g", "宿題を 忘れて（　）。", "しまいました", ["おきました", "ありました", "みました"], "我唔小心唔記得咗做功課。"],
+    ["g", "もっと 早く 起きれ（　）、間に合いました。", "ば", ["と", "たら", "なら"], "早啲起身就趕得切喇。"],
+    ["g", "日本へ 行く（　）、パスポートが 要ります。", "なら", ["のに", "ながら", "ほど"], "如果去日本，就要護照。"],
+    ["r", "説明", "せつめい", ["せつみょう", "せっめい", "せいめい"], "說明"],
+    ["r", "予定", "よてい", ["よじょう", "ようてい", "よでい"], "預定、計劃"],
+    ["r", "経験", "けいけん", ["きょうけん", "けいげん", "けいかん"], "經驗"],
+    ["r", "準備", "じゅんび", ["じゅんぴ", "しゅんび", "じゅんぶ"], "準備"],
+    ["r", "届ける", "とどける", ["とどげる", "とうける", "とどまる"], "送到"],
+    ["m", "急に", "突然", ["慢慢", "經常", "一齊"], ""],
+    ["m", "必要", "需要", ["必然", "重要", "可能"], ""],
+    ["m", "間違える", "搞錯", ["遲到", "忘記", "放棄"], ""],
+    ["m", "壊れる", "壞咗", ["斷咗", "濕咗", "唔見咗"], ""],
+    ["m", "引っ越す", "搬屋", ["拉開", "出門", "轉車"], ""]
+  ] },
+  { id: "N3", name: "大蛇", emoji: "🐍", desc: "三頭大蛇，考のに、はず、まま、うちに。", bank: [
+    ["g", "雨が 降って いる（　）、彼は 出かけた。", "のに", ["から", "ので", "ため"], "明明落緊雨，佢都出咗去。"],
+    ["g", "試験に 合格する（　）、毎日 勉強して いる。", "ために", ["ほど", "ばかり", "うちに"], "為咗考試合格，每日都溫書。"],
+    ["g", "彼は もうすぐ 来る（　）だ。", "はず", ["つもり", "ところ", "まま"], "佢應該就嚟到（推測）。"],
+    ["g", "今 ちょうど ご飯を 食べた（　）です。", "ところ", ["まま", "うち", "ほど"], "我啱啱食完飯。"],
+    ["g", "電気を つけた（　）寝て しまった。", "まま", ["ところ", "ばかり", "うちに"], "開住燈就瞓著咗。"],
+    ["g", "若い（　）に、いろいろな 国へ 行きたい。", "うち", ["まえ", "ほど", "ばかり"], "趁後生，想去好多國家。"],
+    ["g", "この 料理は 母に 教えて（　）。", "もらいました", ["あげました", "くれました", "やりました"], "呢個菜係媽媽教我煮嘅。"],
+    ["g", "日本語が 上手に なる（　）、毎日 練習して います。", "ように", ["ほど", "ばかり", "まま"], "為咗日文變好，每日都練習。"],
+    ["g", "ニュースに よる（　）、あしたは 雪が 降る そうだ。", "と", ["ば", "たら", "なら"], "根據新聞，聽日會落雪。"],
+    ["g", "子ども（　）できる 簡単な 問題だ。", "でも", ["しか", "こそ", "ほど"], "連細路都識做嘅簡單題目。"],
+    ["r", "状態", "じょうたい", ["じょうだい", "しょうたい", "じょうてい"], "狀態"],
+    ["r", "製品", "せいひん", ["せいびん", "ぜいひん", "せいほん"], "產品"],
+    ["r", "確認", "かくにん", ["がくにん", "かくいん", "かっにん"], "確認"],
+    ["r", "普段", "ふだん", ["ふたん", "ぶだん", "ふうだん"], "平時"],
+    ["r", "景色", "けしき", ["けいしょく", "けいしき", "けしょく"], "風景"],
+    ["m", "落ち着く", "冷靜、定落嚟", ["跌落嚟", "到達", "放棄"], ""],
+    ["m", "慌てる", "慌張", ["驚訝", "生氣", "失望"], ""],
+    ["m", "迷う", "猶豫、蕩失路", ["等待", "放心", "迷信"], ""],
+    ["m", "我慢する", "忍耐", ["自滿", "放棄", "努力"], ""],
+    ["m", "支払う", "付款", ["支持", "支援", "打掃"], ""]
+  ] },
+  { id: "N2", name: "竜王", emoji: "🐉", desc: "噴火嘅竜王，考書面語文法同難漢字。", bank: [
+    ["g", "努力した（　）、成功したのだ。", "からこそ", ["ばかりに", "くせに", "ものの"], "正正因為努力過，先至成功。"],
+    ["g", "彼は 疲れて いる（　）、休まずに 働いた。", "にもかかわらず", ["によって", "について", "にとって"], "雖然佢好攰，都冇休息咁做嘢。"],
+    ["g", "この 仕事は 経験（　）、誰でも できる。", "を問わず", ["に限って", "に沿って", "にかけては"], "呢份工唔理有冇經驗，邊個都做到。"],
+    ["g", "社長の 意見（　）、計画を 変更した。", "に基づいて", ["に反して", "にわたって", "に対して"], "根據社長嘅意見，改咗計劃。"],
+    ["g", "雨が 降らない（　）、試合は 行われる。", "かぎり", ["うえに", "くせに", "わりに"], "只要唔落雨，比賽照舉行。"],
+    ["g", "彼女は 歌手（　）、女優としても 有名だ。", "だけでなく", ["どころか", "ものの", "としたら"], "佢唔單止係歌手，做演員都好出名。"],
+    ["g", "子どもの（　）、よく この 川で 遊んだ。", "ころ", ["うえ", "ほど", "まま"], "細個嗰陣，成日喺呢條河度玩。"],
+    ["g", "説明書（　）組み立てて ください。", "に沿って", ["に反して", "に比べて", "に加えて"], "請跟住說明書砌。"],
+    ["g", "勉強すれば する（　）、面白く なる。", "ほど", ["ものの", "まで", "うちに"], "越讀越有趣。"],
+    ["g", "試験の 結果は 努力（　）だ。", "次第", ["以来", "最中", "限り"], "考試結果就睇你點努力。"],
+    ["r", "範囲", "はんい", ["ばんい", "はんにい", "はにい"], "範圍"],
+    ["r", "依頼", "いらい", ["いだい", "えらい", "いれい"], "委託"],
+    ["r", "承知", "しょうち", ["じょうち", "しょうし", "そうち"], "知道、答應"],
+    ["r", "柔軟", "じゅうなん", ["にゅうなん", "じゅうたん", "じゅうなみ"], "柔軟、靈活"],
+    ["r", "貿易", "ぼうえき", ["ぼうえい", "もうえき", "ぼえき"], "貿易"],
+    ["m", "妥当", "恰當", ["妥協", "穩陣", "安全"], ""],
+    ["m", "慎重", "謹慎", ["隆重", "重要", "沉重"], ""],
+    ["m", "曖昧", "含糊", ["親密", "暗淡", "不安"], ""],
+    ["m", "交渉", "談判", ["交流", "交換", "干涉"], ""],
+    ["m", "衰える", "衰退", ["腐爛", "減少", "消失"], ""]
+  ] },
+  { id: "N1", name: "鬼神", emoji: "👹", desc: "最後嘅大魔王。打贏佢就係日文大師。", bank: [
+    ["g", "雨が 降ろう（　）、試合は 行う。", "が", ["から", "ので", "のに"], "無論落唔落雨，比賽照做。"],
+    ["g", "彼女は 涙（　）話を 聞いた。", "ながらに", ["ばかりに", "ばかりか", "なりに"], "佢一路流眼淚一路聽。"],
+    ["g", "社長（　）、そんな ミスは 許されない。", "ともなると", ["をよそに", "ならでは", "なりに"], "去到社長咁嘅位置，呢種錯係唔容許嘅。"],
+    ["g", "親の 心配（　）、彼は 一人で 旅に 出た。", "をよそに", ["をもって", "にひきかえ", "ならでは"], "唔理父母擔心，佢一個人去咗旅行。"],
+    ["g", "この 味は 老舗（　）だ。", "ならでは", ["ばかり", "ずくめ", "まみれ"], "呢種味道只有老字號先有。"],
+    ["g", "家に 帰る（　）、寝て しまった。", "なり", ["たびに", "ごとに", "ものの"], "一返到屋企就瞓著咗。"],
+    ["g", "事故の 原因は 運転手の 不注意（　）。", "にほかならない", ["にかたくない", "までもない", "に越したことはない"], "意外嘅原因正正就係司機唔小心。"],
+    ["g", "言う（　）、健康が いちばん 大切だ。", "までもなく", ["ものの", "ばかりに", "かたわら"], "唔使講都知，健康最重要。"],
+    ["g", "彼は 仕事の（　）、小説を 書いて いる。", "かたわら", ["あげく", "すえ", "きわみ"], "佢一邊做正職，一邊寫小說。"],
+    ["g", "早く 行くに（　）。", "越したことはない", ["ほかならない", "すぎない", "たえない"], "早啲去梗係最好。"],
+    ["r", "枠組み", "わくぐみ", ["わくくみ", "かくぐみ", "わぐみ"], "框架"],
+    ["r", "均衡", "きんこう", ["きんごう", "ぎんこう", "きんほう"], "平衡"],
+    ["r", "漠然", "ばくぜん", ["まくぜん", "ばくねん", "ばくせん"], "模糊、籠統"],
+    ["r", "頻繁", "ひんぱん", ["びんぱん", "ひんはん", "ひんばん"], "頻繁"],
+    ["r", "懸念", "けねん", ["けんねん", "かいねん", "けんえん"], "擔心、顧慮"],
+    ["m", "拘る", "執着、講究", ["拒絕", "拘捕", "關心"], ""],
+    ["m", "携わる", "參與（工作）", ["攜帶", "協助", "提攜"], ""],
+    ["m", "潔い", "爽快、光明磊落", ["清潔", "純潔", "勇敢"], ""],
+    ["m", "甚だしい", "非常嚴重", ["甚至", "非常快", "十分少"], ""],
+    ["m", "賄う", "應付（費用）", ["賄賂", "收買", "借錢"], ""]
+  ] }
+];
+const BOSS_Q = 15, BOSS_HP = 11, BOSS_HEARTS = 5;
+const bossRec = (id) => S.game.boss[id] || null;
+const bossUnlocked = (i) => i === 0 || !!(bossRec(BOSSES[i - 1].id) || {}).cleared;
+function predicted() {
+  let top = null;
+  BOSSES.forEach((b) => { if ((bossRec(b.id) || {}).cleared) top = b.id; });
+  const lv = levelOf(masteredLesson());
+  return top ? { name: `${top} 合格`, sub: `已經打贏 ${top} Boss · ${lv.sub}` } : lv;
+}
+function bankQ(b, it) {
+  const [kind, q, a, ds, zh] = it;
+  return { mode: "bank", kind, q, ans: a, opts: shuffle([a, ...ds]), zh, card: { id: "x" + b.id, L: 0, mean: zh, p: b.id } };
+}
+let BF = null;
+function startBoss(i) {
+  const b = BOSSES[i];
+  let qs;
+  if (b.id === "N5") {
+    // N5：課本第1課至最新一課 10 題 ＋ 題庫 5 題
+    P.all = true;
+    qs = shuffle([...buildQs("mean", 3), ...buildQs("read", 4), ...buildQs("joshi", 3)]);
+    P.all = false;
+    qs = shuffle(qs.concat(pickN(b.bank, BOSS_Q - qs.length).map((it) => bankQ(b, it))));
+  } else qs = pickN(b.bank, BOSS_Q).map((it) => bankQ(b, it));
+  BF = { i, b, qs, n: 0, hits: 0, hearts: BOSS_HEARTS, picked: null, fx: "", combo: 0, xp: 0 };
+  go("boss");
+}
+function bossQuestion(q) {
+  if (q.mode !== "bank") return questionHtml(q);
+  if (q.kind === "r") return `<div class="ruby">呢個點讀？</div><div class="big">${esc(q.q)}</div>`;
+  if (q.kind === "m") return `<div class="ruby">咩意思？</div><div class="big">${esc(q.q)}</div>`;
+  return `<div class="ruby">${esc(q.zh)}</div><div class="big pattern" style="font-size:1.35rem;line-height:1.8">${esc(q.q).replace("（　）", `<span class="blank">（　）</span>`)}</div>`;
+}
+function bossFeedback(q) {
+  if (q.mode !== "bank") return feedbackHtml(q);
+  if (q.kind === "g") return `<div class="jp">${esc(q.q.replace("（　）", q.ans))}</div><div class="zh">${esc(q.zh)}</div>`;
+  return `<div class="jp" style="font-size:1.5rem">${esc(q.q)}</div><div>${esc(q.kind === "r" ? q.ans + (q.zh ? " · " + q.zh : "") : q.ans)}</div>${memoHtml(q.q)}`;
+}
+function renderBoss() {
+  const el = document.getElementById("v-boss");
+  if (!BF) {
+    const pr = predicted();
+    el.innerHTML = `
+      <div class="level-card game"><div class="level"><span class="muted">預計程度</span><b>${esc(pr.name)}</b><span>${esc(pr.sub)}</span></div></div>
+      <p class="muted">每隻 Boss ${BOSS_Q} 題，你有 ${BOSS_HEARTS} 粒心。答啱 ${BOSS_HP} 題就打贏，打贏先解鎖下一隻。每兩三個星期再挑戰一次，睇吓自己去到邊。</p>
+      <div class="boss-map">${BOSSES.map((b, i) => {
+        const r = bossRec(b.id), open = bossUnlocked(i);
+        const ago = r && r.last != null ? today() - r.last : null;
+        return `<div class="boss-node ${r && r.cleared ? "cleared" : ""} ${open ? "" : "locked"}">
+          <span class="boss-emoji" aria-hidden="true">${open ? b.emoji : "🔒"}</span>
+          <div class="boss-info"><b class="game-font">${b.id} · ${esc(b.name)}</b><span>${esc(b.desc)}</span>
+            <span class="muted">${r ? `${r.cleared ? "已討伐 ✓ · " : ""}最好成績 ${r.best}/${BOSS_Q} · 挑戰 ${r.tries} 次${ago != null ? ` · ${ago ? ago + " 日前" : "今日"}` : ""}` : open ? "未挑戰" : `打贏 ${BOSSES[i - 1].id} 先解鎖`}</span></div>
+          ${open ? `<button class="btn ${r && r.cleared ? "" : "primary"} small" data-boss="${i}">${r ? "再挑戰" : "挑戰"}</button>` : ""}
+        </div>`;
+      }).join("")}</div>`;
+    el.querySelectorAll("[data-boss]").forEach((b) => (b.onclick = () => startBoss(+b.dataset.boss)));
+    return;
+  }
+  const F = BF, b = F.b;
+  const over = F.picked === null && (F.hits >= BOSS_HP || F.hearts <= 0 || F.n >= F.qs.length);
+  const hpPct = Math.max(0, ((BOSS_HP - F.hits) / BOSS_HP) * 100);
+  const hearts = Array.from({ length: BOSS_HEARTS }, (_, k) => `<span class="${k < F.hearts ? "" : "lost"}">❤</span>`).join("");
+  const arena = `<div class="arena ${F.fx}">
+      <div class="boss-head"><b class="game-font">${b.id} · ${esc(b.name)}</b><span class="muted">HP ${BOSS_HP - F.hits}/${BOSS_HP}</span></div>
+      <div class="hp"><i style="width:${hpPct}%"></i></div>
+      <div class="boss-big" aria-hidden="true">${b.emoji}${F.fx === "hit" ? `<span class="dmg game-font">-1</span>` : ""}</div>
+      <div class="hearts" aria-label="剩 ${F.hearts} 粒心">${hearts}${F.combo >= 2 ? `<span class="combo game-font">🔥${F.combo} COMBO</span>` : ""}</div>
+    </div>`;
+  if (over) {
+    const win = F.hits >= BOSS_HP;
+    if (!F.done) {
+      F.done = true;
+      const r = S.game.boss[b.id] || (S.game.boss[b.id] = { best: 0, cleared: false, tries: 0, last: null });
+      const first = win && !r.cleared;
+      r.best = Math.max(r.best, F.hits); r.tries++; r.last = today(); r.cleared = r.cleared || win;
+      const bonus = win ? 100 * (F.i + 1) + (first ? 100 : 0) : 0;
+      F.bonus = bonus; F.first = first;
+      if (bonus) addXP(bonus);
+      snapshot(); save();
+    }
+    el.innerHTML = `${arena}
+      <div class="done">
+        <div class="stamp game-font" style="${win ? "" : "color:var(--ink-soft);border-color:var(--ink-soft)"}">${win ? "討伐" : "敗北"}</div>
+        <h2>${win ? `打贏 ${b.id} ${esc(b.name)}！` : `${esc(b.name)} 仲未倒……`}</h2>
+        <p>答啱 ${F.hits}/${F.n} 題 · 得到 <b>${F.xp + (F.bonus || 0)} EXP</b>${F.first ? " · 首次討伐獎勵" : ""}</p>
+        ${win && BOSSES[F.i + 1] ? `<p class="muted">解鎖咗 ${BOSSES[F.i + 1].id} ${esc(BOSSES[F.i + 1].name)}！</p>` : ""}
+        ${!win ? `<p class="muted">答錯嘅題目已經放入溫習。練多啲再嚟過！</p>` : ""}
+        <div class="row" style="justify-content:center"><button class="btn primary" id="bAgain">再挑戰</button><button class="btn" id="bMap">返 Boss 地圖</button></div>
+      </div>`;
+    document.getElementById("bAgain").onclick = () => startBoss(F.i);
+    document.getElementById("bMap").onclick = () => { BF = null; renderBoss(); };
+    return;
+  }
+  const q = F.qs[F.n], done = F.picked !== null;
+  const right = done && F.picked === q.ans;
+  el.innerHTML = `${arena}
+    <div class="progress"><span>第 ${F.n + 1}/${F.qs.length} 題</span></div>
+    <div class="card practice"><div class="face">${bossQuestion(q)}</div></div>
+    <div class="opts ${q.kind === "m" || q.mode === "mean" ? "zh-opts" : ""}">${q.opts.map((o, j) => {
+      const cls = done ? (o === q.ans ? "right" : o === F.picked ? "wrong" : "") : "";
+      return `<button class="opt ${cls}" data-o="${j}" ${done ? "disabled" : ""}>${esc(o)}</button>`;
+    }).join("")}</div>
+    ${done ? `<div class="answer verdict ${right ? "ok" : "ng"}"><b>${right ? "命中！" : "被反擊！"}</b>${bossFeedback(q)}</div>
+      <div class="row"><button class="btn primary" id="bNext">${F.hits >= BOSS_HP ? "打低咗！睇結果" : F.hearts <= 0 ? "冇晒心……睇結果" : "繼續"}</button>${canSpeak ? `<button class="btn small" id="bSay">聽發音</button>` : ""}</div>` : ""}
+    <div class="row"><button class="btn ghost small" id="bQuit">逃走</button></div>`;
+  el.querySelectorAll(".opt").forEach((btn) => (btn.onclick = () => {
+    F.picked = q.opts[+btn.dataset.o];
+    const ok = F.picked === q.ans;
+    if (ok) { F.hits++; F.combo++; const x = 5 * (F.i + 1) + Math.max(0, F.combo - 2); F.xp += x; addXP(x); F.fx = "hit"; }
+    else { F.hearts--; F.combo = 0; F.fx = "hurt"; if (q.card && !q.card.id.startsWith("x")) markWeak(q.card); logWrong("boss", q.q || q.k || q.pre + q.ans, q.zh || ""); }
+    if (q.mode !== "bank") rec(catKeys(q), ok);
+    rec(["boss:" + b.id], ok);
+    save(); renderBoss();
+    if (S.settings.auto) speak(q.mode === "bank" ? (q.kind === "g" ? q.q.replace("（　）", q.ans) : q.kind === "r" ? q.ans : q.q) : sayOf(q));
+  }));
+  const nx = document.getElementById("bNext");
+  if (nx) { nx.onclick = () => { F.n++; F.picked = null; F.fx = ""; renderBoss(); }; nx.focus(); }
+  const say = document.getElementById("bSay"); if (say) say.onclick = () => speak(q.mode === "bank" ? (q.kind === "r" ? q.ans : q.q.replace("（　）", q.ans)) : sayOf(q));
+  document.getElementById("bQuit").onclick = () => { BF = null; renderBoss(); };
+}
+
+/* ===== 角色狀態（雷達圖） ===== */
+const STATS6 = [
+  { name: "語彙", keys: ["srs:v", "m:mean"] }, { name: "漢字", keys: ["m:read", "m:pick", "m:write"] },
+  { name: "文法", keys: ["srs:g"] }, { name: "助詞", keys: ["m:joshi"] },
+  { name: "變化", keys: ["m:verb"] }, { name: "閱讀", keys: ["read"] }
+];
+const RANK = (v) => (v == null ? "?" : v >= 90 ? "S" : v >= 80 ? "A" : v >= 65 ? "B" : v >= 50 ? "C" : v >= 30 ? "D" : "E");
+function stat6() {
+  return STATS6.map((s) => {
+    const vs = s.keys.map(dimScore).filter((v) => v != null);
+    return { name: s.name, v: vs.length ? Math.round((vs.reduce((a, b) => a + b, 0) / vs.length) * 99) : null };
+  });
+}
+function radarSvg(st) {
+  const cx = 130, cy = 120, R = 82, n = st.length;
+  const pt = (i, r) => { const a = -Math.PI / 2 + (i * 2 * Math.PI) / n; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; };
+  const ring = (f) => st.map((_, i) => pt(i, R * f).map((x) => x.toFixed(1)).join(",")).join(" ");
+  const poly = st.map((s, i) => pt(i, R * Math.max(0.04, (s.v || 0) / 99)).map((x) => x.toFixed(1)).join(",")).join(" ");
+  const labels = st.map((s, i) => { const [x, y] = pt(i, R + 22); return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" class="r-lab">${s.name}<tspan class="r-rank" dx="4">${RANK(s.v)}</tspan></text>`; }).join("");
+  const axes = st.map((_, i) => { const [x, y] = pt(i, R); return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="r-axis"/>`; }).join("");
+  return `<svg class="radar" viewBox="0 0 260 240" role="img" aria-label="能力雷達圖：${st.map((s) => s.name + (s.v == null ? "未測" : s.v)).join("、")}">
+    <polygon points="${ring(1)}" class="r-ring"/><polygon points="${ring(0.66)}" class="r-ring"/><polygon points="${ring(0.33)}" class="r-ring"/>
+    ${axes}<polygon points="${poly}" class="r-val"/>${labels}</svg>`;
+}
+function statusWindow() {
+  const lv = playerLv(), xp = S.game.xp, lo = lvXP(lv), hi = lvXP(lv + 1), pr = predicted(), st = stat6();
+  const cleared = BOSSES.filter((b) => (bossRec(b.id) || {}).cleared);
+  return `<section class="status">
+    <div class="status-top">
+      <div><span class="game-font status-lv">Lv.${lv}</span> <span class="status-title">${titleOf(lv)}</span></div>
+      <span class="muted">${xp} EXP</span>
+    </div>
+    <div class="xpbar" title="升級仲差 ${hi - xp} EXP"><i style="width:${((xp - lo) / (hi - lo)) * 100}%"></i></div>
+    <div class="muted" style="font-size:var(--step--1)">升 Lv.${lv + 1} 仲差 ${hi - xp} EXP</div>
+    ${radarSvg(st)}
+    <div class="stat-grid">${st.map((s) => `<div><span>${s.name}</span><b class="game-font">${s.v == null ? "--" : s.v}</b><i class="rank r-${RANK(s.v)}">${RANK(s.v)}</i></div>`).join("")}</div>
+    <div class="status-foot"><span>預計程度：<b>${esc(pr.name)}</b></span><span class="badges">${BOSSES.map((b) => `<span class="${(bossRec(b.id) || {}).cleared ? "" : "dim"}" title="${b.id}">${b.emoji}</span>`).join("")}</span></div>
+    <div class="row"><button class="btn small primary" id="toBoss">挑戰 Boss</button><button class="btn small" id="doTest">做程度測驗</button></div>
+  </section>`;
 }
 
 /* ===== 生字 ===== */
@@ -2141,10 +2488,7 @@ function renderStats() {
   }).join("");
   const lastNote = S.notes[0];
   const ability = `
-    <div class="level-card">
-      <div class="level"><span class="muted">而家程度</span><b>${lv.name}</b><span>${lv.sub}</span>${prev && prev.lv != null && prev.lv !== masteredLesson() ? `<span class="muted">一星期前：穩固到第${prev.lv}課</span>` : ""}</div>
-      <button class="btn ${masteredLesson() ? "" : "primary"} small" id="doTest">做程度測驗</button>
-    </div>
+    ${statusWindow()}
     <p class="memory">${esc(memory)}</p>
     <h2>能力分析表</h2>
     <div class="table-wrap"><table class="ability">
@@ -2182,6 +2526,7 @@ function renderStats() {
     P.mode = t.mode; P.range = t.range; startRun(); go("practice");
   }));
   document.getElementById("doTest").onclick = () => { P.mode = "test"; startRun(); go("practice"); };
+  document.getElementById("toBoss").onclick = () => go("boss");
   const an = document.getElementById("aiAnalyse");
   if (an) an.onclick = async () => {
     const cats = Object.entries(S.stats.cat).filter(([k]) => catName(k)).map(([k, v]) => `${catName(k)}：${v[0]}/${v[1]}`).join("；");
@@ -2277,7 +2622,7 @@ function renderSetup() {
 
 /* ===== 導航 ===== */
 let current = "today";
-const RENDER = { today: renderToday, practice: renderPractice, vocab: renderVocab, grammar: renderGrammar, stats: renderStats, setup: renderSetup };
+const RENDER = { today: renderToday, practice: renderPractice, boss: renderBoss, vocab: renderVocab, grammar: renderGrammar, stats: renderStats, setup: renderSetup };
 function go(v) {
   current = v;
   document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.v === v));
@@ -2288,14 +2633,14 @@ function go(v) {
 document.querySelectorAll("#tabs button").forEach((b) => (b.onclick = () => go(b.dataset.v)));
 function updateMeta() {
   const due = CARDS.filter((c) => inScope(c) && S.c[c.id] && S.c[c.id].d <= today()).length;
-  document.getElementById("meta").textContent = `第1–${S.settings.cur}課 · ${due} 張到期`;
+  document.getElementById("meta").innerHTML = `<span class="game-font hud-lv">Lv.${playerLv()}</span> 預計 ${esc(predicted().name)} · ${due} 張到期`;
   document.body.classList.toggle("big", !!S.settings.big);
 }
 let toastT;
 function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2400); }
 
 vocabL = gramL = S.settings.cur;
-const start = /^(today|practice|vocab|grammar|stats|setup)$/.test(location.hash.slice(1)) ? location.hash.slice(1) : "today";
+const start = /^(today|practice|boss|vocab|grammar|stats|setup)$/.test(location.hash.slice(1)) ? location.hash.slice(1) : "today";
 go(start);
 
 /* ===== 雲端同步（db + user） ===== */
