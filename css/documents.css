@@ -70,6 +70,88 @@ body {
     gap: 0.5rem;
 }
 
+/* 登入 */
+body.is-locked .dz-topbar-actions,
+body.is-locked .dz-layout {
+    display: none;
+}
+
+.dz-login {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: var(--bg-secondary);
+}
+
+.dz-login[hidden] {
+    display: none;
+}
+
+.dz-login-card {
+    width: min(380px, 100%);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 2rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+}
+
+.dz-login-brand {
+    font-size: 0.6875rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.dz-login-card h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.dz-login-message {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    min-height: 1.3rem;
+}
+
+.dz-login-message.dz-login-error {
+    color: var(--danger-color);
+}
+
+.dz-login-btn {
+    padding: 0.7rem 1rem;
+    font-size: 0.9375rem;
+}
+
+.dz-login-btn svg {
+    background: #fff;
+    border-radius: 50%;
+    padding: 2px;
+    box-sizing: content-box;
+}
+
+.dz-login-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.dz-user {
+    font-size: 0.8125rem;
+    opacity: 0.85;
+    align-self: center;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* 版面 */
 .dz-layout {
     display: grid;
@@ -920,6 +1002,10 @@ body {
 }
 
 @media (max-width: 480px) {
+    .dz-user {
+        display: none;
+    }
+
     .dz-layout {
         padding: 0.75rem;
     }
