@@ -1,0 +1,984 @@
+/* 報價單 / 發票 / 收據 工具 */
+:root {
+    --primary-color: #6366f1;
+    --primary-dark: #4f46e5;
+    --danger-color: #ef4444;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #374151;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+
+    /* 文件配色 (跟 Canva 範本) */
+    --doc-accent: #b8dc94;
+    --doc-text: #3a3a3a;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang HK", "Microsoft JhengHei", sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* 頂部 */
+.dz-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    box-shadow: var(--shadow-md);
+}
+
+.dz-topbar h1 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dz-back {
+    color: #fff;
+    font-size: 1.125rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+}
+
+.dz-back:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.dz-topbar-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* 版面 */
+.dz-layout {
+    display: grid;
+    grid-template-columns: minmax(340px, 440px) 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    align-items: start;
+}
+
+.dz-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dz-preview {
+    position: sticky;
+    top: 4.5rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem;
+    overflow: hidden;
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+}
+
+.dz-preview-box {
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+/* 卡片 / 欄位 */
+.dz-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dz-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dz-card-head h2 {
+    font-size: 1rem;
+}
+
+.dz-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.dz-row-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.dz-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.dz-field > span {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.dz-field input,
+.dz-field textarea,
+.dz-field select,
+.dz-history-filters input,
+.dz-history-filters select {
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font: inherit;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    background: #fff;
+}
+
+.dz-field textarea {
+    resize: vertical;
+}
+
+.dz-field-hint small {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.3;
+}
+
+.dz-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.dz-history-filters.dz-client-filters {
+    grid-template-columns: 1fr;
+}
+
+.dz-label-row label {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* 揀項目 */
+.dz-add-item {
+    font-weight: 500;
+    color: var(--primary-dark);
+}
+
+.dz-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dz-link-btn {
+    border: none;
+    background: none;
+    color: var(--primary-color);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.dz-link-btn:hover {
+    text-decoration: underline;
+}
+
+.dz-fit {
+    font-size: 0.8125rem;
+    border-radius: var(--border-radius);
+    padding: 0.5rem 0.75rem;
+}
+
+.dz-fit-shrunk {
+    background: #eef2ff;
+    color: #3730a3;
+}
+
+.dz-fit-over {
+    background: #fff1f2;
+    color: #9f1239;
+}
+
+/* 舊客戶 */
+.dz-client-list {
+    padding: 0.5rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+
+.dz-client-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.1rem 0.75rem;
+    text-align: left;
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: #fff;
+    font: inherit;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.dz-client-row:hover {
+    border-color: var(--primary-color);
+    background: #f5f6ff;
+}
+
+.dz-client-row strong {
+    font-weight: 600;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.dz-client-row span {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.dz-client-row .dz-client-meta {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    text-align: right;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.dz-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.dz-preset-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+}
+
+.dz-preset-row span {
+    flex: 1;
+    min-width: 0;
+}
+
+.dz-preset-row small {
+    color: var(--text-secondary);
+}
+
+.dz-field input:focus,
+.dz-field textarea:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -1px;
+    border-color: transparent;
+}
+
+.dz-checks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.dz-checks label {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* 類型切換 */
+.dz-segment {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 0.25rem;
+    gap: 0.25rem;
+}
+
+.dz-segment button {
+    border: none;
+    background: transparent;
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.dz-segment button small {
+    font-weight: 400;
+    font-size: 0.75rem;
+}
+
+.dz-segment button.active {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+/* 項目 */
+.dz-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--bg-secondary);
+}
+
+.dz-item-head {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.dz-item-no {
+    flex: 1;
+    font-weight: 600;
+}
+
+.dz-total-line {
+    text-align: right;
+    font-size: 1rem;
+}
+
+/* 按鈕 */
+.dz-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: #fff;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.dz-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.dz-btn-primary {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+.dz-btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.dz-btn-ghost {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: transparent;
+    color: #fff;
+}
+
+.dz-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.dz-btn-small {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8125rem;
+}
+
+.dz-icon-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.dz-icon-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.dz-icon-btn.dz-danger:hover {
+    color: var(--danger-color);
+}
+
+.dz-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.dz-status {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    min-height: 1.25rem;
+}
+
+/* 對話框 */
+.dz-dialog {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    width: min(640px, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    padding: 0;
+    margin: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.dz-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.dz-dialog-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+.dz-dialog-head h2 {
+    font-size: 1.125rem;
+}
+
+.dz-dialog-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dz-dialog-body h3 {
+    font-size: 0.9375rem;
+    margin-top: 0.5rem;
+}
+
+.dz-dialog-foot {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.dz-hint {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.dz-signature-setting {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.dz-signature-setting img {
+    width: 140px;
+    height: 70px;
+    object-fit: contain;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    background: #fff;
+}
+
+.dz-signature-setting img:not([src]) {
+    visibility: hidden;
+}
+
+.dz-signature-setting div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* 紀錄 */
+.dz-history-filters {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 0.5rem;
+    padding: 1rem 1rem 0;
+}
+
+.dz-history-list {
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.dz-history-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.25rem 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    align-items: center;
+}
+
+.dz-history-row.current {
+    border-color: var(--primary-color);
+}
+
+.dz-history-main {
+    min-width: 0;
+    cursor: pointer;
+}
+
+.dz-history-main strong {
+    display: block;
+}
+
+.dz-history-main > .dz-history-note {
+    color: #b45309 !important;
+}
+
+.dz-history-main > span {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dz-history-side {
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.dz-badge {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.dz-badge-quotation { background: #e0e7ff; color: #3730a3; }
+.dz-badge-invoice { background: #fef3c7; color: #92400e; }
+.dz-badge-receipt { background: #d1fae5; color: #065f46; }
+
+.dz-empty {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem 0;
+}
+
+/* ========== 文件本身 (A4) ==========
+   極簡黑白：細字、髮絲線、大量留白。--fs 由 JS 調，內容太長時自動縮細 */
+.doc-page {
+    --fs: 1;
+    --ink: #161616;
+    --ink-soft: #5e5e5e;
+    --ink-faint: #9a9a9a;
+    --hair: #dedede;
+    width: 210mm;
+    height: 297mm;
+    background: #fff;
+    color: var(--ink);
+    font-family: "Jost", "Noto Sans HK", "Helvetica Neue", Arial, "PingFang HK", "Microsoft JhengHei", sans-serif;
+    font-weight: 300;
+    font-size: calc(8pt * var(--fs));
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+    position: relative;
+    overflow: hidden;
+    transform-origin: top left;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.1);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+}
+
+.doc-page.doc-long {
+    height: auto;
+    min-height: 297mm;
+    overflow: visible;
+}
+
+.doc-inner {
+    min-height: 100%;
+    padding: 20mm 18mm 16mm;
+    display: flex;
+    flex-direction: column;
+}
+
+.doc-label {
+    display: block;
+    font-size: calc(5.8pt * var(--fs));
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 1.2mm;
+}
+
+.doc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10mm;
+    padding-bottom: 7mm;
+    border-bottom: 0.15mm solid var(--ink);
+}
+
+.doc-brand-name {
+    font-size: calc(7.4pt * var(--fs));
+    font-weight: 500;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+}
+
+.doc-brand-lines {
+    margin-top: 1.5mm;
+    font-size: calc(6.6pt * var(--fs));
+    color: var(--ink-soft);
+    letter-spacing: 0.06em;
+}
+
+.doc-type {
+    font-size: calc(17pt * var(--fs));
+    font-weight: 300;
+    letter-spacing: 0.42em;
+    margin-right: -0.42em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.doc-meta {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    gap: 8mm;
+    margin-top: 8mm;
+}
+
+.doc-meta-value {
+    font-size: calc(7.6pt * var(--fs));
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.doc-client-name {
+    font-weight: 400;
+    font-size: calc(8.4pt * var(--fs));
+}
+
+.doc-meta-block + .doc-meta-block {
+    margin-top: 3.5mm;
+}
+
+.doc-paid {
+    display: inline-block;
+    margin-top: 3.5mm;
+    padding: 0.8mm 2.6mm;
+    border: 0.15mm solid var(--ink);
+    font-size: calc(6pt * var(--fs));
+    font-weight: 500;
+    letter-spacing: 0.3em;
+}
+
+.doc-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 11mm;
+    table-layout: fixed;
+}
+
+.doc-items th {
+    font-size: calc(5.8pt * var(--fs));
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    text-align: left;
+    padding: 0 0 2mm;
+    border-bottom: 0.15mm solid var(--ink);
+}
+
+.doc-items td {
+    vertical-align: top;
+    padding: 3.2mm 0 3.4mm;
+    border-bottom: 0.1mm solid var(--hair);
+    font-variant-numeric: tabular-nums;
+}
+
+.doc-items .c-no { width: 8mm; color: var(--ink-faint); }
+.doc-items .c-qty { width: 18mm; text-align: right; }
+.doc-items .c-unit { width: 24mm; text-align: right; }
+.doc-items .c-amt { width: 28mm; text-align: right; }
+.doc-items td.c-desc { padding-right: 6mm; }
+
+.doc-item-title {
+    font-weight: 400;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.doc-item-details {
+    margin-top: 1mm;
+    font-size: calc(7pt * var(--fs));
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.55;
+}
+
+.doc-total {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 9mm;
+    margin-top: 5mm;
+}
+
+.doc-total-amount {
+    font-size: calc(11pt * var(--fs));
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.doc-spacer {
+    flex: 1;
+    min-height: 8mm;
+}
+
+.doc-foot {
+    display: flex;
+    flex-direction: column;
+    gap: 5mm;
+}
+
+.doc-payment {
+    font-size: calc(6.6pt * var(--fs));
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.doc-terms {
+    margin: 0;
+    padding-left: 3.6mm;
+    font-size: calc(6pt * var(--fs));
+    line-height: 1.55;
+    color: var(--ink-soft);
+    column-count: 2;
+    column-gap: 8mm;
+}
+
+.doc-terms li {
+    break-inside: avoid;
+    margin-bottom: 0.8mm;
+    padding-left: 0.5mm;
+}
+
+.doc-signs {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 14mm;
+    margin-top: 3mm;
+}
+
+.doc-sign {
+    width: 58mm;
+    font-size: calc(6.6pt * var(--fs));
+}
+
+.doc-sign-own {
+    margin-left: auto;
+}
+
+.doc-sign-space {
+    position: relative;
+    height: 17mm;
+    display: flex;
+    align-items: flex-end;
+}
+
+.doc-sign-sig {
+    height: 16mm;
+    max-width: 40mm;
+    object-fit: contain;
+    object-position: left bottom;
+    margin-bottom: -2mm;
+    position: relative;
+    z-index: 1;
+}
+
+.doc-sign-chop {
+    position: absolute;
+    right: 2mm;
+    bottom: -4mm;
+    width: 20mm;
+    height: 20mm;
+    object-fit: contain;
+    opacity: 0.9;
+}
+
+.doc-sign-rule {
+    border-top: 0.15mm solid var(--ink);
+    margin-bottom: 1.6mm;
+}
+
+.doc-sign-name {
+    font-weight: 400;
+    letter-spacing: 0.04em;
+}
+
+.doc-sign-role {
+    color: var(--ink-faint);
+}
+
+.doc-client-sign .doc-sign-space {
+    height: 17mm;
+}
+
+/* 預覽入面標出 A4 底線，超出就睇到 */
+.doc-page.doc-long::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 297mm;
+    border-top: 0.4mm dashed #e11d48;
+}
+
+/* 手機 */
+@media (max-width: 900px) {
+    .dz-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .dz-preview {
+        position: static;
+        max-height: none;
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dz-layout {
+        padding: 0.75rem;
+    }
+
+    .dz-topbar-actions span {
+        display: none;
+    }
+
+    .dz-row-3 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dz-checks {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 列印：只印文件 */
+@page {
+    size: A4;
+    margin: 0;
+}
+
+@media print {
+    body {
+        background: #fff;
+    }
+
+    .dz-topbar,
+    .dz-editor,
+    .dz-dialog {
+        display: none !important;
+    }
+
+    .dz-layout {
+        display: block;
+        padding: 0;
+    }
+
+    .dz-preview {
+        position: static;
+        padding: 0;
+        background: none;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .dz-preview-box {
+        width: auto !important;
+        height: auto !important;
+        overflow: visible;
+    }
+
+    .doc-page {
+        transform: none !important;
+        box-shadow: none;
+    }
+
+    .doc-page.doc-long::after {
+        display: none;
+    }
+}

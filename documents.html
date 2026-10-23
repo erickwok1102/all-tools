@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>報價單 / 發票 / 收據</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Noto+Sans+HK:wght@300;400;500&display=swap">
+    <link rel="stylesheet" href="css/documents.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="dz-topbar">
+        <a class="dz-back" href="index.html" title="返回學員管理系統"><i class="fas fa-arrow-left"></i></a>
+        <h1><i class="fas fa-file-invoice-dollar"></i> 報價單 / 發票 / 收據</h1>
+        <div class="dz-topbar-actions">
+            <button class="dz-btn dz-btn-ghost" id="btnHistory"><i class="fas fa-folder-open"></i><span>紀錄</span></button>
+            <button class="dz-btn dz-btn-ghost" id="btnSettings"><i class="fas fa-cog"></i><span>設定</span></button>
+        </div>
+    </header>
+
+    <div class="dz-layout">
+        <!-- 編輯區 -->
+        <section class="dz-editor">
+            <div class="dz-segment" id="typeSegment" role="tablist">
+                <button data-type="quotation" role="tab">報價單<small>Quotation</small></button>
+                <button data-type="invoice" role="tab">發票<small>Invoice</small></button>
+                <button data-type="receipt" role="tab">收據<small>Receipt</small></button>
+            </div>
+
+            <div class="dz-card">
+                <label class="dz-field" id="profileField">
+                    <span>抬頭</span>
+                    <select data-field="profileId" id="profileSelect"></select>
+                </label>
+                <div class="dz-row">
+                    <label class="dz-field">
+                        <span>編號</span>
+                        <input type="text" data-field="number" autocomplete="off">
+                    </label>
+                    <label class="dz-field">
+                        <span>日期</span>
+                        <input type="date" data-field="date">
+                    </label>
+                </div>
+                <div class="dz-field">
+                    <div class="dz-label-row">
+                        <label for="toName">致 (機構 / 客戶名稱)</label>
+                        <button type="button" class="dz-link-btn" id="btnClients"><i class="fas fa-address-book"></i> 舊客戶</button>
+                    </div>
+                    <input type="text" id="toName" data-field="toName" placeholder="新客直接打名，舊客撳右上角揀" autocomplete="off">
+                </div>
+                <div class="dz-row">
+                    <label class="dz-field">
+                        <span>聯絡電話 / 電郵</span>
+                        <input type="text" data-field="mobile" placeholder="9261 0810">
+                    </label>
+                    <label class="dz-field">
+                        <span>聯絡人</span>
+                        <input type="text" data-field="contact" placeholder="Amy">
+                    </label>
+                </div>
+                <label class="dz-field">
+                    <span>備註 (Remarks)</span>
+                    <input type="text" data-field="remarks" placeholder="例：相關報價單 / 發票編號">
+                </label>
+            </div>
+
+            <div class="dz-card">
+                <div class="dz-card-head">
+                    <h2>項目</h2>
+                </div>
+                <div id="itemList"></div>
+                <label class="dz-field">
+                    <span class="dz-visually-hidden">加入項目</span>
+                    <select id="addItemSelect" class="dz-add-item"></select>
+                </label>
+                <div class="dz-total-line">總數：<strong id="editorTotal">$0</strong></div>
+            </div>
+
+            <div class="dz-card">
+                <div class="dz-row">
+                    <label class="dz-field">
+                        <span>條款範本</span>
+                        <select id="termSetSelect"></select>
+                    </label>
+                    <div class="dz-field dz-field-hint">
+                        <span>&nbsp;</span>
+                        <small id="termSetHint">揀咗範本會覆蓋下面嘅條款</small>
+                    </div>
+                </div>
+                <label class="dz-field">
+                    <span>條款 (每行一條，留空即不顯示)</span>
+                    <textarea data-field="terms" rows="6"></textarea>
+                </label>
+                <div class="dz-checks">
+                    <label><input type="checkbox" data-field="showBank"> 顯示付款 / 銀行資料</label>
+                    <label><input type="checkbox" data-field="showClientSign"> 顯示客戶簽署欄</label>
+                    <label><input type="checkbox" data-field="showSignature"> 我方簽名</label>
+                    <label><input type="checkbox" data-field="showChop"> 蓋公司印</label>
+                    <label><input type="checkbox" data-field="paid"> 蓋「PAID」印</label>
+                </div>
+            </div>
+
+            <div class="dz-card">
+                <label class="dz-field">
+                    <span>內部備註 (唔會印出嚟)</span>
+                    <textarea data-field="note" rows="2" placeholder="例：客話其他團隊平啲 / 已收訂金"></textarea>
+                </label>
+            </div>
+
+            <div class="dz-actions">
+                <button class="dz-btn dz-btn-primary" id="btnSave"><i class="fas fa-save"></i> 儲存</button>
+                <button class="dz-btn dz-btn-primary" id="btnPrint"><i class="fas fa-file-pdf"></i> 列印 / 存 PDF</button>
+                <button class="dz-btn" id="btnToInvoice"><i class="fas fa-arrow-right"></i> 轉做發票</button>
+                <button class="dz-btn" id="btnToReceipt"><i class="fas fa-arrow-right"></i> 轉做收據</button>
+                <button class="dz-btn" id="btnDuplicate"><i class="fas fa-copy"></i> 複製一份</button>
+                <button class="dz-btn" id="btnNew"><i class="fas fa-file"></i> 開新一張</button>
+            </div>
+            <p class="dz-fit" id="fitStatus" hidden></p>
+            <p class="dz-status" id="saveStatus" aria-live="polite"></p>
+        </section>
+
+        <!-- 預覽區 -->
+        <section class="dz-preview" id="previewWrap">
+            <div class="dz-preview-box" id="previewBox">
+                <div class="doc-page" id="docPage"></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 紀錄 -->
+    <dialog class="dz-dialog" id="historyDialog">
+        <div class="dz-dialog-head">
+            <h2>紀錄 <small id="historyCount"></small></h2>
+            <button class="dz-icon-btn" data-close aria-label="關閉"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="dz-history-filters">
+            <select id="historyType">
+                <option value="">全部</option>
+                <option value="quotation">報價單</option>
+                <option value="invoice">發票</option>
+                <option value="receipt">收據</option>
+            </select>
+            <input type="search" id="historySearch" placeholder="搜尋編號 / 客戶 / 項目">
+        </div>
+        <div class="dz-history-list" id="historyList"></div>
+        <div class="dz-dialog-foot">
+            <button class="dz-btn dz-btn-small" id="btnExport"><i class="fas fa-download"></i> 匯出備份</button>
+            <label class="dz-btn dz-btn-small">
+                <i class="fas fa-upload"></i> 匯入備份
+                <input type="file" id="importFile" accept="application/json,.json" hidden>
+            </label>
+        </div>
+    </dialog>
+
+    <!-- 舊客戶 -->
+    <dialog class="dz-dialog" id="clientDialog">
+        <div class="dz-dialog-head">
+            <h2>舊客戶 <small id="clientCount"></small></h2>
+            <button class="dz-icon-btn" data-close aria-label="關閉"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="dz-history-filters dz-client-filters">
+            <input type="search" id="clientSearch" placeholder="搜尋客戶 / 聯絡人 / 電話">
+        </div>
+        <div class="dz-client-list" id="clientListBox"></div>
+    </dialog>
+
+    <!-- 設定 -->
+    <dialog class="dz-dialog" id="settingsDialog">
+        <div class="dz-dialog-head">
+            <h2>設定</h2>
+            <button class="dz-icon-btn" data-close aria-label="關閉"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="dz-dialog-body">
+            <label class="dz-field">
+                <span>修改邊個抬頭</span>
+                <select id="settingsProfile"></select>
+            </label>
+
+            <h3>公司資料</h3>
+            <div class="dz-row">
+                <label class="dz-field"><span>抬頭名稱 (只喺揀單時見到)</span><input type="text" data-pf="label"></label>
+                <label class="dz-field"><span>公司名稱</span><input type="text" data-pf="companyName"></label>
+            </div>
+            <div class="dz-row">
+                <label class="dz-field"><span>電話</span><input type="text" data-pf="phone"></label>
+                <label class="dz-field"><span>IG / Facebook</span><input type="text" data-pf="social"></label>
+            </div>
+            <label class="dz-field"><span>地址</span><input type="text" data-pf="address"></label>
+            <div class="dz-row dz-row-3">
+                <label class="dz-field"><span>報價單編號開頭</span><input type="text" data-pf-prefix="quotation"></label>
+                <label class="dz-field"><span>發票編號開頭</span><input type="text" data-pf-prefix="invoice"></label>
+                <label class="dz-field"><span>收據編號開頭</span><input type="text" data-pf-prefix="receipt"></label>
+            </div>
+
+            <h3>付款資料</h3>
+            <label class="dz-field"><span>付款說明</span><input type="text" data-pf="paymentNote"></label>
+            <label class="dz-field"><span>銀行 / FPS 資料</span><textarea data-pf="bankInfo" rows="3" placeholder="例：HSBC Account Number: xxx-xxxxxx-xxx / Account Name: ..."></textarea></label>
+
+            <h3>簽署</h3>
+            <div class="dz-row">
+                <label class="dz-field"><span>簽署人</span><input type="text" data-pf="signerName"></label>
+                <label class="dz-field"><span>職銜</span><input type="text" data-pf="signerTitle"></label>
+            </div>
+            <div class="dz-signature-setting">
+                <img data-pf-img="signature" alt="簽名">
+                <div>
+                    <label class="dz-btn dz-btn-small">
+                        <i class="fas fa-signature"></i> 上載簽名
+                        <input type="file" data-pf-upload="signature" accept="image/*" hidden>
+                    </label>
+                    <button class="dz-btn dz-btn-small" data-pf-clear="signature">移除</button>
+                </div>
+            </div>
+            <div class="dz-signature-setting">
+                <img data-pf-img="chop" alt="公司印">
+                <div>
+                    <label class="dz-btn dz-btn-small">
+                        <i class="fas fa-stamp"></i> 上載公司印
+                        <input type="file" data-pf-upload="chop" accept="image/*" hidden>
+                    </label>
+                    <button class="dz-btn dz-btn-small" data-pf-clear="chop">移除</button>
+                </div>
+            </div>
+
+            <h3>條款範本</h3>
+            <p class="dz-hint">寫 {company} 會自動換成上面嘅公司名稱。</p>
+            <div id="termSetEditor" class="dz-stack"></div>
+
+            <h3>快捷項目</h3>
+            <p class="dz-hint">喺項目度撳「存做快捷」就會加入呢度。</p>
+            <div id="presetEditor" class="dz-stack"></div>
+
+            <p class="dz-hint">設定只會儲存喺呢部機嘅瀏覽器，換機記得用「匯出備份」。</p>
+        </div>
+    </dialog>
+
+    <template id="itemTemplate">
+        <div class="dz-item">
+            <div class="dz-item-head">
+                <span class="dz-item-no"></span>
+                <button class="dz-icon-btn" data-action="preset" title="存做快捷項目"><i class="fas fa-star"></i></button>
+                <button class="dz-icon-btn" data-action="up" title="上移"><i class="fas fa-arrow-up"></i></button>
+                <button class="dz-icon-btn" data-action="down" title="下移"><i class="fas fa-arrow-down"></i></button>
+                <button class="dz-icon-btn dz-danger" data-action="remove" title="刪除"><i class="fas fa-trash"></i></button>
+            </div>
+            <label class="dz-field">
+                <span>項目名稱</span>
+                <input type="text" data-item="title" placeholder="例：Lion Dance Performance">
+            </label>
+            <label class="dz-field">
+                <span>詳情 (日期、時間、地點等，可多行)</span>
+                <textarea data-item="details" rows="3" placeholder="Date: &#10;Time: &#10;Location: "></textarea>
+            </label>
+            <div class="dz-row dz-row-3">
+                <label class="dz-field">
+                    <span>單價 (HKD)</span>
+                    <input type="number" data-item="price" min="0" step="any" inputmode="decimal">
+                </label>
+                <label class="dz-field">
+                    <span>數量</span>
+                    <input type="number" data-item="qty" min="0" step="any" inputmode="decimal">
+                </label>
+                <label class="dz-field">
+                    <span>單位</span>
+                    <input type="text" data-item="unit" placeholder="堂 / 小時 / Set">
+                </label>
+            </div>
+            <label class="dz-field">
+                <span>價錢欄改寫 (選填，例：Waived、(Deposit) $2,000)</span>
+                <input type="text" data-item="priceText">
+            </label>
+        </div>
+    </template>
+
+    <script src="js/documents.js"></script>
+</body>
+</html>
