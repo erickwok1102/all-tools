@@ -2,8 +2,12 @@
 (function () {
     'use strict';
 
-    const DOCS_KEY = 'yatonDocuments';
-    const SETTINGS_KEY = 'yatonDocumentSettings';
+    // 呢兩個係 Supabase 公開 key，寫喺前端冇問題：資料由資料庫權限 (RLS) 保護，只有授權 email 讀寫到
+    const SUPABASE_URL = 'https://enytofxkwofmmzkamouu.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_2yXXu372W5I4w_bVVm_2fQ_YeIDE_D_';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true }
+    });
 
     const TYPES = {
         quotation: { title: 'QUOTATION', zh: '報價單', numberLabel: 'Quotation' },
@@ -144,26 +148,6 @@
     // 加入快捷項目時，報價單條款跟住呢個優先次序揀
     const CATEGORY_TERMS = ['class', 'performance', 'equipment'];
 
-    // ---------- 儲存 ----------
-    function readJSON(key, fallback) {
-        try {
-            const raw = localStorage.getItem(key);
-            return raw ? JSON.parse(raw) : fallback;
-        } catch (e) {
-            return fallback;
-        }
-    }
-
-    function writeJSON(key, value) {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch (e) {
-            alert('儲存失敗：瀏覽器儲存空間不足或被封鎖。請先匯出備份。');
-            return false;
-        }
-    }
-
     function clone(value) {
         return JSON.parse(JSON.stringify(value));
     }
@@ -202,8 +186,8 @@
         };
     }
 
-    let settings = normalizeSettings(readJSON(SETTINGS_KEY, null));
-    let docs = readJSON(DOCS_KEY, []);
+    let settings = normalizeSettings(null);
+    let docs = [];
     let current = null;
     let dirty = false;
     let settingsProfileId = 'yaton';
@@ -731,8 +715,77 @@
         fillForm();
     }
 
+    // ---------- 雲端儲存 (Supabase) ----------
+    function docRow(doc) {
+        return {
+            id: doc.id,
+            type: doc.type,
+            number: doc.number,
+            doc_date: doc.date || null,
+            to_name: doc.toName || null,
+            data: doc
+        };
+    }
+
+    // 舊紀錄 / 精簡格式：補返預設值，條款範本 (termSet) 換成全文
+    function normalizeDoc(doc) {
+        const defaults = typeDefaults(doc.type, doc.profileId);
+        Object.keys(defaults).forEach(key => {
+            if (doc[key] === undefined) doc[key] = defaults[key];
+        });
+        if (doc.termSet !== undefined) {
+            doc.terms = termSetText(doc.termSet, profileOf(doc));
+            delete doc.termSet;
+        }
+        ['toName', 'contact', 'mobile', 'remarks', 'note'].forEach(key => {
+            if (doc[key] === undefined) doc[key] = '';
+        });
+        if (doc.numberEdited === undefined) doc.numberEdited = true;
+        doc.items = (doc.items || []).map(item => Object.assign(blankItem(), item));
+        if (!doc.updatedAt) doc.updatedAt = doc.createdAt = Date.parse(doc.date) || 0;
+        return doc;
+    }
+
+    async function loadDocs() {
+        const rows = [];
+        const page = 1000;
+        for (let from = 0; ; from += page) {
+            const { data, error } = await sb.from('doc_documents').select('data').range(from, from + page - 1);
+            if (error) throw error;
+            rows.push(...data);
+            if (data.length < page) break;
+        }
+        docs = rows.map(r => normalizeDoc(r.data));
+    }
+
+    async function loadSettings() {
+        const { data, error } = await sb.from('doc_settings').select('data').eq('id', 'main').maybeSingle();
+        if (error) throw error;
+        settings = normalizeSettings(data ? data.data : null);
+    }
+
+    async function saveDocs(list) {
+        for (let i = 0; i < list.length; i += 100) {
+            const { error } = await sb.from('doc_documents').upsert(list.slice(i, i + 100).map(docRow));
+            if (error) throw error;
+        }
+    }
+
+    // 設定逐粒字改，等停手先一次過存
+    let settingsTimer = null;
+    function queueSettingsSave() {
+        clearTimeout(settingsTimer);
+        settingsTimer = setTimeout(saveSettingsNow, 800);
+    }
+
+    async function saveSettingsNow() {
+        clearTimeout(settingsTimer);
+        const { error } = await sb.from('doc_settings').upsert({ id: 'main', data: settings });
+        if (error) alert('設定儲存失敗：' + error.message);
+    }
+
     // ---------- 動作 ----------
-    function saveCurrent() {
+    async function saveCurrent() {
         if (!current.number.trim()) {
             alert('請輸入編號');
             return false;
@@ -745,9 +798,16 @@
         current.createdAt = current.createdAt || now;
         current.updatedAt = now;
         const copy = clone(current);
+        setStatus('儲存緊…');
+        try {
+            await saveDocs([copy]);
+        } catch (e) {
+            setStatus('儲存失敗');
+            alert('儲存失敗：' + e.message);
+            return false;
+        }
         const index = docs.findIndex(d => d.id === current.id);
         if (index >= 0) docs[index] = copy; else docs.push(copy);
-        if (!writeJSON(DOCS_KEY, docs)) return false;
         dirty = false;
         setStatus('已儲存 ' + new Date(now).toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' }));
         return true;
@@ -765,8 +825,8 @@
         fillForm();
     }
 
-    function convertTo(type) {
-        if (dirty && !saveCurrent()) return;
+    async function convertTo(type) {
+        if (dirty && !(await saveCurrent())) return;
         const source = current;
         const doc = Object.assign(clone(source), typeDefaults(type, source.profileId), {
             id: newId(),
@@ -785,8 +845,8 @@
         setStatus('由 ' + source.number + ' 轉成' + TYPES[type].zh + '，未儲存');
     }
 
-    function duplicate() {
-        if (dirty && !saveCurrent()) return;
+    async function duplicate() {
+        if (dirty && !(await saveCurrent())) return;
         current = Object.assign(clone(current), {
             id: newId(),
             date: todayISO(),
@@ -844,15 +904,19 @@
             : '<p class="dz-empty">未有紀錄</p>';
     }
 
-    function onHistoryClick(e) {
+    async function onHistoryClick(e) {
         const row = e.target.closest('.dz-history-row');
         if (!row) return;
         const doc = docs.find(d => d.id === row.dataset.id);
         if (!doc) return;
         if (e.target.closest('[data-delete]')) {
             if (!confirm('刪除 ' + doc.number + '？呢個動作唔可以還原。')) return;
+            const { error } = await sb.from('doc_documents').delete().eq('id', doc.id);
+            if (error) {
+                alert('刪除失敗：' + error.message);
+                return;
+            }
             docs = docs.filter(d => d.id !== doc.id);
-            writeJSON(DOCS_KEY, docs);
             if (current.id === doc.id) markDirty();
             renderHistory();
             return;
@@ -877,50 +941,54 @@
         URL.revokeObjectURL(url);
     }
 
-    function importData(parsed) {
+    async function importData(parsed) {
         const incoming = Array.isArray(parsed) ? parsed : parsed.documents;
         if (!Array.isArray(incoming)) throw new Error('format');
         let settingsNote = '';
         let added = 0;
         let updated = 0;
-        if (parsed.settings && confirm('備份入面有設定 (公司資料、簽名、條款、快捷項目)，要用佢覆蓋而家嘅設定嗎？')) {
+        if (parsed.settings) {
             settings = normalizeSettings(parsed.settings);
-            saveSettings();
+            await saveSettingsNow();
             fillProfileSelects();
             settingsNote = '，設定已更新';
         }
+        const changed = [];
         incoming.forEach(doc => {
             if (!doc || !doc.id || !TYPES[doc.type] || !Array.isArray(doc.items)) return;
-            // 舊紀錄只記低用邊個條款範本，匯入時先填返全文
-            if (doc.terms === undefined) {
-                const defaults = typeDefaults(doc.type, doc.profileId);
-                Object.keys(defaults).forEach(key => {
-                    if (doc[key] === undefined) doc[key] = defaults[key];
-                });
-                if (doc.termSet !== undefined) doc.terms = termSetText(doc.termSet, profileOf(doc));
-            }
-            delete doc.termSet;
+            normalizeDoc(doc);
             const index = docs.findIndex(d => d.id === doc.id);
             if (index < 0) {
                 docs.push(doc);
+                changed.push(doc);
                 added++;
             } else if ((doc.updatedAt || 0) > (docs[index].updatedAt || 0)) {
                 docs[index] = doc;
+                changed.push(doc);
                 updated++;
             }
         });
-        writeJSON(DOCS_KEY, docs);
+        await saveDocs(changed);
         return '匯入完成：新增 ' + added + ' 份，更新 ' + updated + ' 份' + settingsNote;
     }
 
     function importBackup(file) {
         const reader = new FileReader();
-        reader.onload = () => {
-            let message;
+        reader.onload = async () => {
+            let parsed;
             try {
-                message = importData(JSON.parse(reader.result));
+                parsed = JSON.parse(reader.result);
             } catch (e) {
                 alert('檔案格式唔啱');
+                return;
+            }
+            let message;
+            setStatus('匯入緊…');
+            try {
+                message = await importData(parsed);
+            } catch (e) {
+                setStatus('');
+                alert(e.message === 'format' ? '檔案格式唔啱' : '匯入失敗：' + e.message);
                 return;
             }
             renderHistory();
@@ -956,7 +1024,7 @@
     }
 
     function saveSettings() {
-        writeJSON(SETTINGS_KEY, settings);
+        queueSettingsSave();
         if (current) renderPreview();
     }
 
@@ -1003,7 +1071,7 @@
         }
     }
 
-    // 圖片縮細先存，避免撐爆 localStorage
+    // 圖片縮細先存，避免資料太大
     function loadImage(file, key) {
         const profile = editingProfile();
         const reader = new FileReader();
@@ -1071,8 +1139,8 @@
             if (btn) switchType(btn.dataset.type);
         });
 
-        $('#btnSave').addEventListener('click', () => {
-            if (saveCurrent()) fillForm();
+        $('#btnSave').addEventListener('click', async () => {
+            if (await saveCurrent()) fillForm();
         });
         $('#btnPrint').addEventListener('click', printDoc);
         $('#btnToInvoice').addEventListener('click', () => convertTo('invoice'));
@@ -1086,9 +1154,16 @@
             fillForm();
         });
 
-        $('#btnHistory').addEventListener('click', () => {
+        $('#btnHistory').addEventListener('click', async () => {
             renderHistory();
             $('#historyDialog').showModal();
+            // 另一部機可能改過，打開時同步返最新
+            try {
+                await loadDocs();
+                renderHistory();
+            } catch (e) {
+                $('#historyCount').textContent = '(未能同步：' + e.message + ')';
+            }
         });
         $('#historyType').addEventListener('change', renderHistory);
         $('#historySearch').addEventListener('input', renderHistory);
@@ -1097,6 +1172,13 @@
         $('#importFile').addEventListener('change', e => {
             if (e.target.files[0]) importBackup(e.target.files[0]);
             e.target.value = '';
+        });
+
+        $('#btnLogin').addEventListener('click', login);
+        $('#btnLogout').addEventListener('click', async () => {
+            if (!confirmDiscard()) return;
+            dirty = false;
+            await sb.auth.signOut();
         });
 
         $('#btnSettings').addEventListener('click', () => {
@@ -1115,6 +1197,7 @@
         });
         $('#settingsDialog').addEventListener('click', onSettingClick);
         $('#settingsDialog').addEventListener('close', () => {
+            saveSettingsNow();
             fillTermSetSelect();
             renderAddItemSelect();
         });
@@ -1128,9 +1211,13 @@
             });
         });
 
-        window.addEventListener('resize', fitPreview);
+        window.addEventListener('resize', () => {
+            if (current) fitPreview();
+        });
         // 字型載入後字闊會變，要重新量過
-        if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => renderPreview());
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {
+            if (current) renderPreview();
+        });
         window.addEventListener('beforeunload', e => {
             if (!dirty) return;
             e.preventDefault();
@@ -1138,17 +1225,93 @@
         });
     }
 
+    // ---------- 登入 ----------
+    function showLogin(message) {
+        document.body.classList.add('is-locked');
+        $('#loginScreen').hidden = false;
+        $('#btnLogin').disabled = false;
+        $('#loginMessage').textContent = message || '只限授權帳戶使用';
+        $('#loginMessage').classList.toggle('dz-login-error', !!message);
+    }
+
+    function showLoading(message) {
+        $('#loginScreen').hidden = false;
+        $('#btnLogin').disabled = true;
+        $('#loginMessage').textContent = message;
+        $('#loginMessage').classList.remove('dz-login-error');
+    }
+
+    async function login() {
+        $('#btnLogin').disabled = true;
+        const { error } = await sb.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: location.origin + location.pathname,
+                queryParams: { prompt: 'select_account' }
+            }
+        });
+        if (error) showLogin('登入失敗：' + error.message);
+    }
+
+    // Google / Supabase 拒絕登入時，錯誤會喺網址度帶返嚟
+    function loginErrorFromUrl() {
+        const params = new URLSearchParams(location.search + '&' + location.hash.replace(/^#/, ''));
+        const message = params.get('error_description') || params.get('error');
+        if (!message) return '';
+        history.replaceState(null, '', location.pathname);
+        return /not allowed|403|signup/i.test(message) ? '呢個帳戶冇權限使用呢個系統' : '登入失敗：' + message;
+    }
+
+    async function enterApp(session) {
+        showLoading('載入緊資料…');
+        const { data: allowed, error } = await sb.rpc('is_doc_admin');
+        if (error || !allowed) {
+            await sb.auth.signOut();
+            showLogin(error ? '登入出錯：' + error.message : (session.user.email || '呢個帳戶') + ' 冇權限使用呢個系統');
+            return;
+        }
+        try {
+            // 要先有設定 (抬頭、條款) 先補得返舊單嘅預設值
+            await loadSettings();
+            await loadDocs();
+        } catch (e) {
+            showLogin('讀取資料失敗：' + e.message);
+            return;
+        }
+        $('#userEmail').textContent = session.user.email;
+        fillProfileSelects();
+        current = newDoc('quotation');
+        dirty = false;
+        fillForm();
+        document.body.classList.remove('is-locked');
+        $('#loginScreen').hidden = true;
+        fitPreview();
+    }
+
+    async function boot() {
+        bindEvents();
+        const urlError = loginErrorFromUrl();
+        showLoading('檢查登入狀態…');
+        const { data } = await sb.auth.getSession();
+        if (data.session) {
+            await enterApp(data.session);
+        } else {
+            showLogin(urlError);
+        }
+        sb.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT') showLogin();
+            if (event === 'SIGNED_IN' && session && document.body.classList.contains('is-locked')) enterApp(session);
+        });
+    }
+
     // 俾外部 (例如匯入舊紀錄) 用
     window.yatonDocuments = {
-        importData(data) {
-            const message = importData(data);
+        async importData(data) {
+            const message = await importData(data);
             fillForm();
             return message;
         }
     };
 
-    fillProfileSelects();
-    current = newDoc('quotation');
-    bindEvents();
-    fillForm();
+    boot();
 })();
