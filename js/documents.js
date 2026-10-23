@@ -3,8 +3,9 @@
     'use strict';
 
     // 呢兩個係 Supabase 公開 key，寫喺前端冇問題：資料由資料庫權限 (RLS) 保護，只有授權 email 讀寫到
-    const SUPABASE_URL = 'https://enytofxkwofmmzkamouu.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_2yXXu372W5I4w_bVVm_2fQ_YeIDE_D_';
+    // 同 travel-board 共用一個 project，Google 登入已經喺嗰度設定好
+    const SUPABASE_URL = 'https://jyqviiwiwyqshenrteiz.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_KSYBXBQVai77UgmRBH2msQ_WgJudVeu';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true }
     });
